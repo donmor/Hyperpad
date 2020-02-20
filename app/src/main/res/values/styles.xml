@@ -1,0 +1,23 @@
+<resources>
+
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight">
+        <item name="colorPrimary">@color/design_default_color_primary</item>
+        <item name="colorPrimaryDark">@color/design_default_color_primary_dark</item>
+        <item name="colorAccent">@color/design_default_color_accent</item>
+    </style>
+
+<!--    <style name="NoSpaceActionBarTheme" parent="Base.Widget.AppCompat.Toolbar">-->
+<!--        <item name="contentInsetStart">0dp</item>-->
+<!--        <item name="contentInsetStartWithNavigation">0dp</item>-->
+<!--    </style>-->
+
+<!--    <style name="Toolbar.TitleText" parent="TextAppearance.Widget.AppCompat.Toolbar.Title">-->
+<!--        <item name="android:textSize">16sp</item>-->
+<!--    </style>-->
+
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+</resources>

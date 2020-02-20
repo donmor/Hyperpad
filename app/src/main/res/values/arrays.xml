@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="line_breaks">
+        <item>LF   - Unix/Unix like (Default)</item>
+        <item>CRLF - DOS/Windows</item>
+        <item>CR   - Macintosh</item>
+    </string-array>
+</resources>
