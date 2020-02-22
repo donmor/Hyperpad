@@ -50,7 +50,7 @@
         （3）開放源代碼，\n
         （4）使用相同的許可證\n
         \n
-        此應用程式使用 unicode.org / icu 來檢測文本文件的編碼。許可證文件與代碼一起提供。 \n
+        此應用程式使用 unicode-org/icu 來檢測文本文件的編碼。許可證文件與代碼一起提供。 \n
         \n
         有關本應用程式的更多詳細信息，請訪問https://github.com/donmor/Hyperpad。
     </string>

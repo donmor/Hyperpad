@@ -54,7 +54,7 @@
         (3)Disclose source under\n
         (4)Same license\n
         \n
-        This app uses unicode.org / icu to detect the encoding of text files. License files provided with the code.\n
+        This app uses unicode-org/icu to detect the encoding of text files. License files provided with the code.\n
         \n
         For more details about this app, please visit https://github.com/donmor/Hyperpad .
     </string>

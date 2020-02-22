@@ -32,7 +32,7 @@ is permitted UNDER THESE CONDITIONS:
 3. Disclose source under
 4. Same license.
 
-This app uses [unicode.org/icu](https://github.com/unicode.org/icu) to detect the encoding of text files. License files provided with the code.
+This app uses [unicode-org/icu](https://github.com/unicode-org/icu) to detect the encoding of text files. License files provided with the code.
 
 ### Localization
 
