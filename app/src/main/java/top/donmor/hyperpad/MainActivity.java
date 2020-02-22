@@ -754,9 +754,7 @@ public class MainActivity extends AppCompatActivity {
 		ByteArrayOutputStream os = null;
 		boolean retry = false;
 		try {
-			DocumentFile file = DocumentFile.fromSingleUri(this, uri);
-			if (file == null || !file.isFile() || !file.canRead())
-				throw new IOException();
+			File file = new File(uri.toString());
 			is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(uri)));
 			os = new ByteArrayOutputStream(BUF_SIZE);
 			int len = is.available();
@@ -869,16 +867,13 @@ public class MainActivity extends AppCompatActivity {
 		BufferedInputStream is = null;
 		BufferedOutputStream os = null;
 		try {
-			DocumentFile file = DocumentFile.fromSingleUri(this, uri);
-			if (file == null || !file.isFile() || !file.canRead())
-				throw new FileNotFoundException();
+			os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(uri)));
 			Editable e = editor.getText();
 			if (e == null) throw new IOException();
 			String s = setLB(e.toString(), lineBreak);
 			if (log || operation == OPE_NEW || operation == OPE_CLOSE)
 				s += new SimpleDateFormat(KEY_LOG_SDF, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
 			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s).array())));
-			os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(uri)));
 			s = null;
 			int len = is.available();
 			int length, lenTotal = 0;
@@ -977,8 +972,12 @@ public class MainActivity extends AppCompatActivity {
 		int count = 0;
 		Uri[] ux = new Uri[recentUri.length];
 		for (Uri u : recentUri) {
-			DocumentFile file = DocumentFile.fromSingleUri(this, u);
-			if (!u.equals(uri) && file != null && file.isFile() && file.canRead()) ux[count++] = u;
+			try {
+				getContentResolver().openInputStream(u);
+				if (!u.equals(uri)) ux[count++] = u;
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		int w = uri != null ? 1 : 0;
 		int s = Math.min(10, count + w);
