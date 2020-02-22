@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_file">檔案</string>
+    <string name="action_new">新建</string>
+    <string name="action_open">打開</string>
+    <string name="action_recent">最近的檔案</string>
+    <string name="action_save">保存</string>
+    <string name="action_save_as">另存為</string>
+    <string name="action_about">關於 Hyperpad</string>
+    <string name="action_close">關閉</string>
+    <string name="action_edit">編輯</string>
+    <string name="action_undo">撤銷</string>
+    <string name="action_redo">重做</string>
+    <string name="action_view">視圖</string>
+    <string name="action_find">搜尋</string>
+    <string name="action_goto">轉到行</string>
+    <string name="action_line_break">換行符</string>
+    <string name="action_encoding">編碼</string>
+    <string name="action_status_bar">狀態欄</string>
+    <string name="action_warp_text">自動換行</string>
+    <string name="action_font_monospace">等寬字體</string>
+    <string name="action_font_size">字體大小</string>
+    <string name="action_statistics">統計</string>
+    <string name="do_not_save">不要保存</string>
+    <string name="err_load_file">加載檔案時出錯</string>
+    <string name="err_write_file">寫入到檔案時出錯</string>
+    <string name="file_save_confirm">是否要將更改保存到檔案？</string>
+    <string name="find_find">搜尋</string>
+    <string name="find_replace">替換</string>
+    <string name="find_replace_all">替換全部</string>
+    <string name="find_down">向下</string>
+    <string name="find_up">向上</string>
+    <string name="find_not_found">找不到匹配項</string>
+    <string name="find_replaced">替換了 $x 個匹配項</string>
+    <string name="goto_hint">行號</string>
+    <string name="statistics_char">\n字符數\n\n</string>
+    <string name="statistics_word">\n\n單詞數\n\n</string>
+    <string name="statistics_line">\n\n行數\n\n</string>
+    <string name="about">
+        Hyperpad是一款實現了記事本的主要功能的應用程式。 您打開它，編寫內容，然後保存。 就這樣。 \n
+        \n
+        本應用程序遵循GPLv2許可發布，\n
+        （1）商業用途\n
+        （2）修改\n
+        （3）分發\n
+        （4）私人使用\n
+        在這些條件下是允許的:\n
+        （1）提供此許可和版權聲明\n
+        （2）聲明改動\n
+        （3）開放源代碼，\n
+        （4）使用相同的許可證\n
+        \n
+        此應用程式使用 unicode.org / icu 來檢測文本文件的編碼。許可證文件與代碼一起提供。 \n
+        \n
+        有關本應用程式的更多詳細信息，請訪問https://github.com/donmor/Hyperpad。
+    </string>
+</resources>

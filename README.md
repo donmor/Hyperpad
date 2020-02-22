@@ -12,7 +12,7 @@ Hyperpad is an app that simply implements the main function of a notepad. You op
 
 * Create/modify plain text files
 * Remember recent files up to 10
-* Undo/redo on devices below Mashmallow, up to 100 steps
+* Undo/redo on devices below Marshmallow, up to 100 steps
 * Convert the line break and encoding of a file
 * Add timestamp to the end of file(add .LOG to the start of the file)
 

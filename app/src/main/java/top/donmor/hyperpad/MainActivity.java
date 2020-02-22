@@ -12,6 +12,15 @@ import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.LeadingMarginSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
+import android.text.util.Linkify;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -19,7 +28,6 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -39,11 +47,14 @@ import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -59,8 +70,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
-//import org.mozilla.intl.chardet.nsDetector;
-
 public class MainActivity extends AppCompatActivity {
 
 	static {
@@ -69,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
 
 	private static final String
 			CHARSET_DEFAULT = "UTF-8",
+			KEY_CFG_FILE = "hyper.cfg",
 			KEY_CFG_STAT = "status_bar",
 			KEY_CFG_WRAP = "wrap",
 			KEY_CFG_MONO = "font_mono",
@@ -77,12 +87,13 @@ public class MainActivity extends AppCompatActivity {
 			KEY_FIND_TOAST = "$x",
 			KEY_LOG_SDF = "\nhh:mm yyyy/M/d\n",
 			KEY_SIS = "sis",
-			KEY_SIS_LEN = "buf",
+			KEY_SIS_CHANGE = "change",
 			KEY_SIS_CURRENT = "uri",
 			KEY_SIS_CURRENT_NAME = "name",
 			KEY_SIS_ENC = "encoding",
 			KEY_SIS_ID = "id",
 			KEY_SIS_LB = "line_break",
+			KEY_SIS_LEN = "buf",
 			KEY_MODIFIED = "* ",
 			LINE_COL_KEY = "(",
 			LINE_COL_KEY2 = ", ",
@@ -99,24 +110,23 @@ public class MainActivity extends AppCompatActivity {
 			OPE_OPEN = 2,
 			OPE_RECENT = 3,
 			OPE_CLOSE = 4,
+			OPE_ACTION = 5,
 			SAF_OPEN = 42,
 			SAF_SAVE = 43,
 			TAKE_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
 
-	private String[] charsets = Charset.availableCharsets().keySet().toArray(new String[0]);
+	private final String[] charsets = Charset.availableCharsets().keySet().toArray(new String[0]);
 
 	private AppBarLayout appbar;
 	private Toolbar toolbar;
 	private EditorView editor;
+	private SharedPreferences preferences;
+	private AlertDialog dialog;
 
-	private boolean modified = false, canUndo = false, canRedo = false, statusBar = false, wrap = false, mono = false;
+	private boolean canUndo = false, canRedo = false, statusBar = false, wrap = false, mono = false;
 	private int fontSize = 18, dialogPadding = 30, operation = OPE_EDIT;
 	private String lineBreak = LINE_BREAK_LF, encoding = CHARSET_DEFAULT, currentFilename;
 
-	private SharedPreferences preferences;
-	;
-//	private String[] charsets = CharsetDetector.getAllDetectableCharsets();
-	;
 	private Uri current = null;
 	private Uri[] recentUri = new Uri[0];
 
@@ -129,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
 		dialogPadding = (int) (getResources().getDisplayMetrics().density * 20);
 		currentFilename = getString(android.R.string.untitled);
 
-		preferences = getSharedPreferences("hyper.cfg", MODE_PRIVATE);
+		preferences = getSharedPreferences(KEY_CFG_FILE, MODE_PRIVATE);
 		statusBar = preferences.getBoolean(KEY_CFG_STAT, false);
 		wrap = preferences.getBoolean(KEY_CFG_WRAP, true);
 		mono = preferences.getBoolean(KEY_CFG_MONO, false);
@@ -142,7 +152,6 @@ public class MainActivity extends AppCompatActivity {
 		setSupportActionBar(toolbar);
 		this.setTitle(R.string.app_name);
 		toolbar.setSubtitle(currentFilename);
-//		onConfigurationChanged(getResources().getConfiguration());
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 			getWindow().setStatusBarColor(getColor(R.color.design_default_color_primary));
 			getWindow().getDecorView().setSystemUiVisibility((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : View.SYSTEM_UI_FLAG_VISIBLE);
@@ -153,10 +162,9 @@ public class MainActivity extends AppCompatActivity {
 		editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 		editor.setEditorCallback(new EditorView.EditorCallback() {
 			@Override
-			public boolean save() {
+			public void save() {
 				if (current == null) SAFSave(OPE_EDIT);
 				else fileWrite(OPE_EDIT);
-				return true;
 			}
 
 			@Override
@@ -206,6 +214,38 @@ public class MainActivity extends AppCompatActivity {
 		});
 		if (statusBar) loadStatusBar();
 		editor.requestFocus();
+		if (
+				Intent.ACTION_VIEW.
+						equals(
+								getIntent().
+										getAction()))
+			if (editor.isModified()) confirm(OPE_ACTION);
+			else openAction();
+		else
+			System.out.println();
+
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent) {
+		super.onNewIntent(intent);
+		System.out.println(Intent.ACTION_VIEW);
+		System.out.println(intent.getAction());
+		if (
+				Intent.ACTION_VIEW.
+						equals(
+								intent.
+										getAction())) {
+			setIntent(intent);
+			if (editor.isModified()) confirm(OPE_ACTION);
+			else openAction();
+		} else
+			System.out.println();
+	}
+
+	private void openAction() {
+		Uri uri = getIntent().getData();
+		if (uri != null) openDoc(uri);
 
 	}
 
@@ -214,20 +254,6 @@ public class MainActivity extends AppCompatActivity {
 		getMenuInflater().inflate(R.menu.menu_main, menu);
 		return true;
 	}
-
-//	@Override
-//	public boolean onPrepareOptionsMenu(Menu menu) {
-//		MenuItem undo = menu.findItem(R.id.action_undo),
-//				redo = menu.findItem(R.id.action_redo),
-//				wrap = menu.findItem(R.id.action_wrap_text),
-//				mono = menu.findItem(R.id.action_font_monospace);
-//		if (undo != null) undo.setEnabled(canUndo);
-//		if (redo != null) redo.setEnabled(canRedo);
-//		if (wrap != null) wrap.setChecked(this.wrap);
-//		if (mono != null) mono.setChecked(this.mono);
-//
-//		return super.onPrepareOptionsMenu(menu);
-//	}
 
 	@Override
 	public boolean onMenuOpened(int featureId, Menu menu) {
@@ -243,36 +269,19 @@ public class MainActivity extends AppCompatActivity {
 		if (redo != null) redo.setEnabled(canRedo);
 		if (cut != null) cut.setEnabled(canCp);
 		if (copy != null) copy.setEnabled(canCp);
-		if (stat != null) wrap.setChecked(statusBar);
+		if (stat != null) stat.setChecked(statusBar);
 		if (wrap != null) wrap.setChecked(this.wrap);
 		if (mono != null) mono.setChecked(this.mono);
 		return super.onMenuOpened(featureId, menu);
 	}
 
+	@SuppressLint("InflateParams")
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-//		final ViewGroup appbar = findViewById(R.id.appbar);
 		switch (item.getItemId()) {
 			case R.id.action_new:
 				if (editor.isModified()) {
 					confirm(OPE_NEW);
-//					new AlertDialog.Builder(this)
-//							.setTitle(android.R.string.dialog_alert_title)
-//							.setMessage(R.string.file_save_confirm)
-//							.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-//								@Override
-//								public void onClick(DialogInterface dialog, int which) {
-//									SAFSave(OPE_NEW);
-//								}
-//							})
-//							.setNegativeButton(android.R.string.cancel, null)
-//							.setNeutralButton(android.R.string.no, new DialogInterface.OnClickListener() {
-//								@Override
-//								public void onClick(DialogInterface dialog, int which) {
-//									newDoc();
-//								}
-//							})
-//							.show();
 				} else newDoc();
 				break;
 			case R.id.action_open:
@@ -289,6 +298,17 @@ public class MainActivity extends AppCompatActivity {
 				break;
 			case R.id.action_save_as:
 				SAFSave(OPE_EDIT);
+				break;
+			case R.id.action_about:
+				SpannableString spannableString = new SpannableString(getString(R.string.about));
+				Linkify.addLinks(spannableString, Linkify.ALL);
+				android.app.AlertDialog aboutDialog = new android.app.AlertDialog.Builder(this)
+						.setTitle(R.string.action_about)
+						.setMessage(spannableString)
+						.show();
+				((TextView) aboutDialog.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+					((TextView) aboutDialog.findViewById(android.R.id.message)).setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Widget_TextView);
 				break;
 			case R.id.action_close:
 				onBackPressed();
@@ -363,26 +383,26 @@ public class MainActivity extends AppCompatActivity {
 				break;
 			case R.id.action_goto:
 				final EditText line = new EditText(this);
-				line.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+				line.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 				line.setInputType(InputType.TYPE_CLASS_NUMBER);
 				line.setHint(R.string.goto_hint);
-				ViewGroup view = new LinearLayout(this);
-				view.setPadding(dialogPadding, 0, dialogPadding, 0);
-				view.addView(line);
-				final AlertDialog dialog = new AlertDialog.Builder(this)
+				LinearLayout layout = new LinearLayout(this);
+				layout.setPadding(dialogPadding, 0, dialogPadding, 0);
+				layout.addView(line);
+				if (dialog != null) dialog.dismiss();
+				dialog = new AlertDialog.Builder(this)
 						.setTitle(R.string.action_goto)
-						.setView(view)
+						.setView(layout)
 						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 							@Override
 							public void onClick(DialogInterface dialog, int which) {
 								if (line.length() == 0) return;
 								int x = Integer.parseInt(line.getText().toString());
 								if (x <= 0) return;
-								String content = editor.getEditableText().toString(), key;
-								key = content.contains(LINE_BREAK_LF) ? LINE_BREAK_LF : LINE_BREAK_CR;
+								String content = editor.getEditableText().toString();
 								int p = 0;
 								for (int i = 0; i < x - 1; i++) {
-									int v = content.indexOf(key, p);
+									int v = content.indexOf(LINE_BREAK_LF, p);
 									if (v >= 0) p = v + 1;
 								}
 								editor.setSelection(p);
@@ -392,6 +412,7 @@ public class MainActivity extends AppCompatActivity {
 							@Override
 							public void onDismiss(DialogInterface dialog) {
 								editor.requestFocus();
+								MainActivity.this.dialog = null;
 							}
 						})
 						.create();
@@ -407,7 +428,8 @@ public class MainActivity extends AppCompatActivity {
 			case R.id.action_line_break:
 				//noinspection StringEquality
 				final int v = lineBreak == LINE_BREAK_CRLF ? 1 : lineBreak == LINE_BREAK_CR ? 2 : 0;
-				new AlertDialog.Builder(this)
+				if (dialog != null) dialog.dismiss();
+				dialog = new AlertDialog.Builder(this)
 						.setTitle(R.string.action_line_break)
 						.setSingleChoiceItems(R.array.line_breaks, v, new DialogInterface.OnClickListener() {
 							@Override
@@ -416,6 +438,13 @@ public class MainActivity extends AppCompatActivity {
 								lineBreak = which == 1 ? LINE_BREAK_CRLF : which == 2 ? LINE_BREAK_CR : LINE_BREAK_LF;
 								dialog.dismiss();
 								updateStatusBar();
+							}
+						})
+						.setOnDismissListener(new DialogInterface.OnDismissListener() {
+							@Override
+							public void onDismiss(DialogInterface dialog) {
+								editor.requestFocus();
+								MainActivity.this.dialog = null;
 							}
 						})
 						.show();
@@ -427,7 +456,8 @@ public class MainActivity extends AppCompatActivity {
 					i++;
 				}
 				final int v2 = e;
-				new AlertDialog.Builder(this)
+				if (dialog != null) dialog.dismiss();
+				dialog = new AlertDialog.Builder(this)
 						.setTitle(R.string.action_encoding)
 						.setSingleChoiceItems(charsets, v2, new DialogInterface.OnClickListener() {
 							@Override
@@ -436,6 +466,13 @@ public class MainActivity extends AppCompatActivity {
 								encoding = charsets[which];
 								dialog.dismiss();
 								updateStatusBar();
+							}
+						})
+						.setOnDismissListener(new DialogInterface.OnDismissListener() {
+							@Override
+							public void onDismiss(DialogInterface dialog) {
+								editor.requestFocus();
+								MainActivity.this.dialog = null;
 							}
 						})
 						.show();
@@ -470,14 +507,15 @@ public class MainActivity extends AppCompatActivity {
 						editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, picker.getValue());
 					}
 				});
-				FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+				FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
 				params.gravity = Gravity.CENTER;
-				view = new FrameLayout(this);
-				view.setPadding(dialogPadding, 0, dialogPadding, 0);
-				view.addView(picker, params);
-				new AlertDialog.Builder(this)
+				FrameLayout layout1 = new FrameLayout(this);
+				layout1.setPadding(dialogPadding, 0, dialogPadding, 0);
+				layout1.addView(picker, params);
+				if (dialog != null) dialog.dismiss();
+				dialog = new AlertDialog.Builder(this)
 						.setTitle(R.string.action_font_size)
-						.setView(view)
+						.setView(layout1)
 						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 							@Override
 							public void onClick(DialogInterface dialog, int which) {
@@ -491,6 +529,43 @@ public class MainActivity extends AppCompatActivity {
 								editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 							}
 						})
+						.setOnDismissListener(new DialogInterface.OnDismissListener() {
+							@Override
+							public void onDismiss(DialogInterface dialog) {
+								editor.requestFocus();
+								MainActivity.this.dialog = null;
+							}
+						})
+						.show();
+				break;
+			case R.id.action_statistics:
+				int[] stat = editor.statistics(), pan = new int[]{R.string.statistics_char, R.string.statistics_word, R.string.statistics_line};
+				int p;
+				String value;
+				SpannableStringBuilder builder = new SpannableStringBuilder();
+				builder.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.content_sub)), 0, 0, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
+				for (int i1 = 0; i1 < 3; i1++) {
+					builder.append(getString(pan[i1]));
+					p = builder.length();
+					value = String.valueOf(stat[i1]);
+					builder.append(value);
+					builder.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.content)), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+					builder.setSpan(new RelativeSizeSpan(1.2f), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+					builder.setSpan(new LeadingMarginSpan.Standard(dialogPadding, 0), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+					builder.setSpan(new StyleSpan(Typeface.MONOSPACE.getStyle()), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+				}
+				if (dialog != null) dialog.dismiss();
+				dialog = new AlertDialog.Builder(this)
+						.setTitle(R.string.action_statistics)
+						.setMessage(builder)
+						.setPositiveButton(android.R.string.ok, null)
+						.setOnDismissListener(new DialogInterface.OnDismissListener() {
+							@Override
+							public void onDismiss(DialogInterface dialog) {
+								editor.requestFocus();
+								MainActivity.this.dialog = null;
+							}
+						})
 						.show();
 				break;
 		}
@@ -502,215 +577,15 @@ public class MainActivity extends AppCompatActivity {
 		if (resultCode == Activity.RESULT_OK && resultData != null) {
 			final Uri uri = resultData.getData();
 			if (uri != null)
-				try {
-					switch (requestCode) {
-						case SAF_OPEN:
-							openDoc(uri);
-//							DocumentFile file = DocumentFile.fromSingleUri(this, uri);
-//							if (file == null || !file.isFile() || !file.canRead()) return;
-//							currentFilename = file.getName();
-							//						String id = genId();
-							//						TWInfo info = new TWInfo(MainActivity.this, uri);
-							//						if (info.isWiki) {
-							//							try {
-							//								boolean exist = false;
-							//								for (int i = 0; i < db.getJSONArray(DB_KEY_WIKI).length(); i++) {
-							//									if (db.getJSONArray(DB_KEY_WIKI).getJSONObject(i).getString(DB_KEY_URI).equals(uri.toString())) {
-							//										exist = true;
-							//										id = db.getJSONArray(DB_KEY_WIKI).getJSONObject(i).getString(KEY_SIS_ID);
-							//										break;
-							//									}
-							//								}
-							//								if (exist) {
-							//									Toast.makeText(MainActivity.this, R.string.wiki_already_exists, Toast.LENGTH_SHORT).show();
-							//								} else {
-							//									JSONObject w = new JSONObject();
-							//									w.put(KEY_NAME, (info.title != null && info.title.length() > 0) ? info.title : getString(R.string.tiddlywiki));
-							//									w.put(DB_KEY_SUBTITLE, (info.subtitle != null && info.subtitle.length() > 0) ? info.subtitle : STR_EMPTY);
-							//									w.put(KEY_SIS_ID, id);
-							//									w.put(DB_KEY_URI, uri.toString());
-							//									db.getJSONArray(DB_KEY_WIKI).put(db.getJSONArray(DB_KEY_WIKI).length(), w);
-							//									updateIcon(this, info.favicon, id);
-							//								}
-							//								if (!MainActivity.writeJson(MainActivity.this, db))
-							//									throw new Exception();
-							//								getContentResolver().takePersistableUriPermission(uri, TAKE_FLAGS);
-							//							} catch (Exception e) {
-							//								e.printStackTrace();
-							//								Toast.makeText(MainActivity.this, R.string.data_error, Toast.LENGTH_SHORT).show();
-							//							}
-							//							MainActivity.this.onResume();
-							//							if (!loadPage(id))
-							//								Toast.makeText(MainActivity.this, R.string.error_loading_page, Toast.LENGTH_SHORT).show();
-							//						} else {
-							//							Toast.makeText(MainActivity.this, R.string.not_a_wiki, Toast.LENGTH_SHORT).show();
-							//						}
-							break;
-						case SAF_SAVE:
-							fileWrite(this.operation, uri);
-							//						final ProgressDialog progressDialog = new ProgressDialog(this);
-							//						progressDialog.setMessage(getString(R.string.please_wait));
-							//						progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-							//						progressDialog.setCanceledOnTouchOutside(false);
-							//						final Thread thread = new Thread(new Runnable() {
-							//							@Override
-							//							public void run() {
-							//								InputStream is = null;
-							//								OutputStream os = null;
-							//								boolean interrupted = false;
-							//								boolean iNet = false;
-							//								try {
-							//									os = getContentResolver().openOutputStream(uri);
-							//									if (os != null) {
-							//										URL url = new URL(getString(R.string.template_repo));
-							//										HttpsURLConnection httpsURLConnection = (HttpsURLConnection) url.openConnection();
-							//										httpsURLConnection.connect();
-							//										iNet = true;
-							//										is = httpsURLConnection.getInputStream();
-							//										int length;
-							//										byte[] bytes = new byte[4096];
-							//										while ((length = is.read(bytes)) > -1) {
-							//											os.write(bytes, 0, length);
-							//											if (Thread.currentThread().isInterrupted()) {
-							//												interrupted = true;
-							//												break;
-							//											}
-							//										}
-							//										os.flush();
-							//										os.close();
-							//										os = null;
-							//										if (!interrupted) {
-							//											TWInfo info = new TWInfo(MainActivity.this, uri);
-							//											if (!info.isWiki)
-							//												throw new Exception();
-							//											progressDialog.dismiss();
-							//											String id = genId();
-							//											try {
-							//												boolean exist = false;
-							//												JSONObject w = null;
-							//												for (int i = 0; i < db.getJSONArray(DB_KEY_WIKI).length(); i++) {
-							//													w = db.getJSONArray(DB_KEY_WIKI).getJSONObject(i);
-							//													if (w.getString(DB_KEY_URI).equals(uri.toString())) {
-							//														exist = true;
-							//														id = w.getString(KEY_SIS_ID);
-							//														break;
-							//													}
-							//												}
-							//												if (exist) {
-							//													runOnUiThread(new Runnable() {
-							//														@Override
-							//														public void run() {
-							//															Toast.makeText(MainActivity.this, R.string.wiki_replaced, Toast.LENGTH_SHORT).show();
-							//														}
-							//													});
-							//													new File(getDir(MainActivity.KEY_FAVICON, MODE_PRIVATE), id).delete();
-							//												} else {
-							//													w = new JSONObject();
-							//													w.put(KEY_SIS_ID, id);
-							//													db.getJSONArray(DB_KEY_WIKI).put(db.getJSONArray(DB_KEY_WIKI).length(), w);
-							//												}
-							//												w.put(KEY_NAME, (info.title != null && info.title.length() > 0) ? info.title : getString(R.string.tiddlywiki));
-							//												w.put(DB_KEY_SUBTITLE, (info.subtitle != null && info.subtitle.length() > 0) ? info.subtitle : STR_EMPTY);
-							//												w.put(DB_KEY_URI, uri.toString());
-							//												updateIcon(MainActivity.this, info.favicon, id);
-							//												if (!MainActivity.writeJson(MainActivity.this, db))
-							//													throw new Exception();
-							//												getContentResolver().takePersistableUriPermission(uri, TAKE_FLAGS);
-							//											} catch (Exception e) {
-							//												e.printStackTrace();
-							//												runOnUiThread(new Runnable() {
-							//													@Override
-							//													public void run() {
-							//														Toast.makeText(MainActivity.this, R.string.data_error, Toast.LENGTH_SHORT).show();
-							//													}
-							//												});
-							//											}
-							//											runOnUiThread(new Runnable() {
-							//												@Override
-							//												public void run() {
-							//													MainActivity.this.onResume();
-							//												}
-							//											});
-							//											if (!loadPage(id))
-							//												runOnUiThread(new Runnable() {
-							//													@Override
-							//													public void run() {
-							//														Toast.makeText(MainActivity.this, R.string.error_loading_page, Toast.LENGTH_SHORT).show();
-							//													}
-							//												});
-							//										}
-							//									}
-							//								} catch (Exception e) {
-							//									e.printStackTrace();
-							//									progressDialog.dismiss();
-							//									try {
-							//										DocumentsContract.deleteDocument(getContentResolver(), uri);
-							//									} catch (Exception e1) {
-							//										e.printStackTrace();
-							//									}
-							//									final int fid = iNet ? R.string.failed_creating_file : R.string.no_internet;
-							//									runOnUiThread(new Runnable() {
-							//										@Override
-							//										public void run() {
-							//											Toast.makeText(MainActivity.this, fid, Toast.LENGTH_SHORT).show();
-							//										}
-							//									});
-							//								} finally {
-							//									if (is != null)
-							//										try {
-							//											is.close();
-							//										} catch (Exception e) {
-							//											e.printStackTrace();
-							//										}
-							//									if (os != null)
-							//										try {
-							//											os.close();
-							//										} catch (Exception e) {
-							//											e.printStackTrace();
-							//										}
-							//									if (interrupted) try {
-							//										DocumentsContract.deleteDocument(getContentResolver(), uri);
-							//										runOnUiThread(new Runnable() {
-							//											@Override
-							//											public void run() {
-							//												Toast.makeText(MainActivity.this, R.string.cancelled, Toast.LENGTH_SHORT).show();
-							//											}
-							//										});
-							//									} catch (Exception e) {
-							//										e.printStackTrace();
-							//									}
-							//								}
-							//							}
-							//						});
-							//
-							//						progressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getText(android.R.string.cancel), new DialogInterface.OnClickListener() {
-							//							@Override
-							//							public void onClick(DialogInterface dialogInterface, int i) {
-							//								progressDialog.cancel();
-							//							}
-							//						});
-							//						progressDialog.setOnShowListener(new DialogInterface.OnShowListener() {
-							//							@Override
-							//							public void onShow(DialogInterface dialog) {
-							//								thread.start();
-							//							}
-							//						});
-							//						progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
-							//							@Override
-							//							public void onCancel(DialogInterface dialogInterface) {
-							//								thread.interrupt();
-							//							}
-							//						});
-							//						progressDialog.show();
-							break;
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
-				} finally {
-					;
+				switch (requestCode) {
+					case SAF_OPEN:
+						openDoc(uri);
+						break;
+					case SAF_SAVE:
+						fileWrite(this.operation, uri);
+						break;
 				}
 		}
-//		operation = OPE_EDIT;
 	}
 
 
@@ -737,10 +612,10 @@ public class MainActivity extends AppCompatActivity {
 	@Override
 	public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
 		super.onSaveInstanceState(savedInstanceState);
-		if (!editor.isModified()) {
-			return;
+		if (dialog != null) {
+			dialog.dismiss();
+			dialog = null;
 		}
-		System.out.println("SIS============================");
 		String id = UUID.randomUUID().toString();
 		File cacheFile = new File(getCacheDir(), id);
 		BufferedWriter writer = null;
@@ -753,22 +628,15 @@ public class MainActivity extends AppCompatActivity {
 			//noinspection StringEquality
 			if (!preferences.edit()
 					.putBoolean(KEY_SIS, true)
+					.putBoolean(KEY_SIS_CHANGE, editor.isModified())
 					.putString(KEY_SIS_ID, id)
 					.putInt(KEY_SIS_LEN, editor.length())
 					.putString(KEY_SIS_CURRENT, current != null ? current.toString() : null)
 					.putString(KEY_SIS_CURRENT_NAME, currentFilename)
-					.putInt(KEY_SIS_LB, lineBreak == LINE_BREAK_CRLF ? 1 : lineBreak == LINE_BREAK_LF ? 2 : 0)
+					.putInt(KEY_SIS_LB, lineBreak == LINE_BREAK_CRLF ? 1 : lineBreak == LINE_BREAK_CR ? 2 : 0)
 					.putString(KEY_SIS_ENC, encoding)
 					.commit())
 				throw new IOException();
-//			savedInstanceState.putString(KEY_SIS_ID, id);
-//			savedInstanceState.putBoolean(KEY_SIS, true);
-//			savedInstanceState.putInt(KEY_SIS_LEN, Math.min(editor.length(), BUF_SIZE));
-//			savedInstanceState.putString(KEY_SIS_CURRENT, current != null ? current.toString() : null);
-//			savedInstanceState.putString(KEY_SIS_CURRENT_NAME, currentFilename);
-//			//noinspection StringEquality
-//			savedInstanceState.putInt(KEY_SIS_LB, lineBreak == LINE_BREAK_CRLF ? 1 : lineBreak == LINE_BREAK_LF ? 2 : 0);
-//			savedInstanceState.putString(KEY_SIS_ENC, encoding);
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
@@ -778,7 +646,6 @@ public class MainActivity extends AppCompatActivity {
 				e.printStackTrace();
 			}
 		}
-//		super.onSaveInstanceState(savedInstanceState);
 	}
 
 	@Override
@@ -791,25 +658,11 @@ public class MainActivity extends AppCompatActivity {
 			try {
 
 				reader = new BufferedReader(new InputStreamReader(new FileInputStream(cacheFile), CHARSET_DEFAULT));
-				int length, lenTotal = 0;
+				int length;
 				StringBuilder builder = new StringBuilder();
-//			int buf = ;
-//			System.out.println(buf);
 				char[] chars = new char[preferences.getInt(KEY_SIS_LEN, Integer.MAX_VALUE)];
 				length = reader.read(chars);
 				builder.append(chars, 0, length);
-//			char[] chars = new char[buf];
-//			reader.read(chars,0,6);
-//			builder.append(chars);
-//			while (
-//					(length =
-//							reader.read(chars))
-//							!= -1) {
-//				lenTotal += length;
-//				builder.append(chars, 0, length);
-//				System.out.println(length);
-//				System.out.println(lenTotal);
-//			}
 				String u = preferences.getString(KEY_SIS_CURRENT, null);
 				current = u != null ? Uri.parse(u) : null;
 				currentFilename = preferences.getString(KEY_SIS_CURRENT_NAME, getString(android.R.string.untitled));
@@ -817,7 +670,7 @@ public class MainActivity extends AppCompatActivity {
 				lineBreak = e == 1 ? LINE_BREAK_CRLF : e == 2 ? LINE_BREAK_CR : LINE_BREAK_LF;
 				encoding = preferences.getString(KEY_SIS_ENC, CHARSET_DEFAULT);
 				editor.loadContent(builder);
-				editor.currentState.index = 1;
+				if (preferences.getBoolean(KEY_SIS_CHANGE, true)) editor.currentState.index = 1;
 				editor.editorCallback.setModified(editor.isModified());
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -840,41 +693,21 @@ public class MainActivity extends AppCompatActivity {
 				.apply();
 	}
 
-//	@Override
-//	public void onConfigurationChanged(@NonNull Configuration newConfig) {
-//		super.onConfigurationChanged(newConfig);
-//		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) try {
-//			getWindow().setStatusBarColor(getColor(R.color.design_default_color_primary));
-//			getWindow().getDecorView().setSystemUiVisibility((newConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : View.SYSTEM_UI_FLAG_VISIBLE);
-//			toolbar.setBackgroundColor(getResources().getColor(R.color.design_default_color_primary));
-//			toolbar.setTitleTextAppearance(this, R.style.TextAppearance_AppCompat_Widget_ActionBar_Title);
-//			toolbar.setSubtitleTextAppearance(this, R.style.TextAppearance_AppCompat_Small);
-//			if (editor != null) {
-//				editor.setTextAppearance(android.R.style.TextAppearance_Material);
-//				EditorView.EditHistory history = editor.currentState;
-//				recreate();
-//				init();
-//				editor.currentState = history;
-//			}
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//
-//	}
-
 	@Override
 	public void onBackPressed() {
 		if (editor.isModified()) confirm(OPE_CLOSE);
 		else {
 			if (current != null && editor.isLog())
 				fileLog();
+			setRecent(current);
 			super.onBackPressed();
 		}
 	}
 
 	private void confirm(final int operation) {
 		if (operation == OPE_EDIT) return;
-		new AlertDialog.Builder(this)
+		if (dialog != null) dialog.dismiss();
+		dialog = new AlertDialog.Builder(this)
 				.setTitle(android.R.string.dialog_alert_title)
 				.setMessage(R.string.file_save_confirm)
 				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
@@ -885,10 +718,17 @@ public class MainActivity extends AppCompatActivity {
 					}
 				})
 				.setNegativeButton(android.R.string.cancel, null)
-				.setNeutralButton(R.string.dont_save, new DialogInterface.OnClickListener() {
+				.setNeutralButton(R.string.do_not_save, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						processOperation(operation);
+					}
+				})
+				.setOnDismissListener(new DialogInterface.OnDismissListener() {
+					@Override
+					public void onDismiss(DialogInterface dialog) {
+						editor.requestFocus();
+						MainActivity.this.dialog = null;
 					}
 				})
 				.show();
@@ -897,6 +737,7 @@ public class MainActivity extends AppCompatActivity {
 	private void newDoc() {
 		if (!editor.isModified() && current != null && editor.isLog())
 			fileLog();
+		setRecent(current);
 		current = null;
 		currentFilename = getString(android.R.string.untitled);
 		editor.resetAll();
@@ -909,13 +750,10 @@ public class MainActivity extends AppCompatActivity {
 
 	@SuppressWarnings("UnusedAssignment")
 	private void openDoc(Uri uri) {
-		if (!editor.isModified() && current != null && editor.isLog())
-			fileLog();
 		BufferedInputStream is = null;
 		ByteArrayOutputStream os = null;
 		boolean retry = false;
 		try {
-			long t0 = System.currentTimeMillis();
 			DocumentFile file = DocumentFile.fromSingleUri(this, uri);
 			if (file == null || !file.isFile() || !file.canRead())
 				throw new IOException();
@@ -933,40 +771,18 @@ public class MainActivity extends AppCompatActivity {
 			b = os.toByteArray();
 			is.close();
 			os.close();
-//			byte[] b = new byte[is.available()];
-//			if (is.read(b)==-1)throw new IOException();
-//			nsDetector nsDetector = new nsDetector();
-//			nsDetector.Init(getChar);
-//			System.out.println("+++++++++++++++++++++++++++");
-//			for (String c : new CsDetector().getProbCharsets()){
-//				System.out.println(c);
-//			}
 			CharsetDetector detector = new CharsetDetector();
-//			System.out.println("+++++++++++++++++++++++++++");
-//			for (String c : detector.getDetectableCharsets()){
-//				System.out.println(c);
-//			}
-//			System.out.println("+++++++++++++++++++++++++++");
-//			for (Charset c : com.glaforge.i18n.io.CharsetToolkit.getAvailableCharsets()){
-//				System.out.println(c.name());
-//			}
 			CharsetMatch[] matches = detector.setText(b).detectAll();
-//			System.out.println(detector.setText(b).detectAll().length);
-//			for (CharsetMatch match1 : detector.setText(b).detectAll()) {
-//				System.out.println(match1.getName());
-//				System.out.println(match1.getConfidence());
-//			}
 			if (matches == null || matches.length == 0) throw new IOException();
 			CharsetMatch match = matches[0];
 			if (match.getConfidence() <= 10) retry = true;
+			if (!editor.isModified() && current != null && editor.isLog())
+				fileLog();
+			setRecent(current);
 			current = uri;
 			currentFilename = file.getName();
 			encoding = match.getName();
-//			String content = new String(b, encoding);
-//			match = null;
-//			detector = null;
 			String content = match.getString();
-//			encoding = new CharsetToolkit(b).guessEncoding().name();
 			if (!retry) {
 				detector = null;
 				match = null;
@@ -975,13 +791,13 @@ public class MainActivity extends AppCompatActivity {
 			lineBreak = content.contains(LINE_BREAK_CRLF) ? LINE_BREAK_CRLF : content.contains(LINE_BREAK_CR) ? LINE_BREAK_CR : LINE_BREAK_LF;
 			CharSequence sequence = trimLB(content);
 			content = null;
-//			editor.loadContent(content);
 			editor.loadContent(sequence);
 			updateStatusBar();
-			long t1 = System.currentTimeMillis();
-			System.out.println(t1 - t0);
-			getContentResolver().takePersistableUriPermission(uri, TAKE_FLAGS);
-			setRecent(uri);
+			try {
+				getContentResolver().takePersistableUriPermission(uri, TAKE_FLAGS);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			Toast.makeText(this, R.string.err_load_file, Toast.LENGTH_SHORT).show();
@@ -1005,12 +821,20 @@ public class MainActivity extends AppCompatActivity {
 		try {
 			for (int i = 0; i < items.length; i++)
 				items[i] = URLDecoder.decode(recentUri[i].getLastPathSegment(), CHARSET_DEFAULT);
-			new AlertDialog.Builder(this)
+			if (dialog != null) dialog.dismiss();
+			dialog = new AlertDialog.Builder(this)
 					.setTitle(R.string.action_recent)
 					.setItems(items, new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
 							openDoc(recentUri[which]);
+						}
+					})
+					.setOnDismissListener(new DialogInterface.OnDismissListener() {
+						@Override
+						public void onDismiss(DialogInterface dialog) {
+							editor.requestFocus();
+							MainActivity.this.dialog = null;
 						}
 					})
 					.show();
@@ -1020,21 +844,12 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void SAFOpen() {
-//		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
 		startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_OPEN);
-//		else
-//		    startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_OPEN);
 	}
 
 	private void SAFSave(int operation) {
 		this.operation = operation;
-//		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
-		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_SAVE);
-//		else
-//			startActivityForResult(new Intent(Intent.ACTION_CHOOSER).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_SAVE);
-//			startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_SAVE);
-//			startActivityForResult(new Intent(Intent.ACTION_PICK).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_SAVE);
-
+		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename), SAF_SAVE);
 	}
 
 	private void fileWrite(int operation) {
@@ -1049,27 +864,51 @@ public class MainActivity extends AppCompatActivity {
 		fileWrite(operation, uri, false);
 	}
 
+	@SuppressWarnings("UnusedAssignment")
 	private void fileWrite(int operation, Uri uri, boolean log) {
-		BufferedWriter writer = null;
+		BufferedInputStream is = null;
+		BufferedOutputStream os = null;
 		try {
+			DocumentFile file = DocumentFile.fromSingleUri(this, uri);
+			if (file == null || !file.isFile() || !file.canRead())
+				throw new FileNotFoundException();
 			Editable e = editor.getText();
 			if (e == null) throw new IOException();
 			String s = setLB(e.toString(), lineBreak);
 			if (log || operation == OPE_NEW || operation == OPE_CLOSE)
 				s += new SimpleDateFormat(KEY_LOG_SDF, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
-			writer = new BufferedWriter(new OutputStreamWriter(Objects.requireNonNull(getContentResolver().openOutputStream(uri)), CHARSET_DEFAULT));
-			writer.write(s);
-			writer.flush();
+			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s).array())));
+			os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(uri)));
+			s = null;
+			int len = is.available();
+			int length, lenTotal = 0;
+			byte[] b = new byte[BUF_SIZE];
+			while ((length = is.read(b)) != -1) {
+				os.write(b, 0, length);
+				lenTotal += length;
+			}
+			os.flush();
+			if (lenTotal != len) throw new IOException();
+			is.close();
+			os.close();
 			current = uri;
 			currentFilename = Objects.requireNonNull(DocumentFile.fromSingleUri(this, uri)).getName();
 			editor.clearModified();
-			getContentResolver().takePersistableUriPermission(uri, TAKE_FLAGS);
+			try {
+				getContentResolver().takePersistableUriPermission(uri, TAKE_FLAGS);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 			processOperation(operation);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			SAFSave(operation);
 		} catch (Exception e) {
 			e.printStackTrace();
+			Toast.makeText(this, R.string.err_write_file, Toast.LENGTH_SHORT).show();
 		} finally {
-			if (writer != null) try {
-				writer.close();
+			if (os != null) try {
+				os.close();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -1077,6 +916,7 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void processOperation(int operation) {
+		this.operation = OPE_EDIT;
 		switch (operation) {
 			case OPE_NEW:
 				newDoc();
@@ -1090,10 +930,13 @@ public class MainActivity extends AppCompatActivity {
 			case OPE_CLOSE:
 				if (!editor.isModified() && current != null && editor.isLog())
 					fileLog();
+				setRecent(current);
 				super.onBackPressed();
 				break;
+			case OPE_ACTION:
+				openAction();
+				break;
 		}
-		this.operation = OPE_EDIT;
 	}
 
 	private CharSequence trimLB(String c) {
@@ -1113,10 +956,11 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private String setLB(String c, String lineBreak) {
+		//noinspection StringEquality
+		if (lineBreak == LINE_BREAK_LF) return c;
 		StringBuilder builder = new StringBuilder(c);
 		int index, p = 0;
-		//noinspection LoopConditionNotUpdatedInsideLoop,StringEquality
-		while (lineBreak != LINE_BREAK_LF) {
+		while (true) {
 			index = builder.indexOf(LINE_BREAK_LF, p);
 			if (index < 0) break;
 			builder.replace(index, index + 1, lineBreak);
@@ -1138,18 +982,22 @@ public class MainActivity extends AppCompatActivity {
 		}
 		int w = uri != null ? 1 : 0;
 		int s = Math.min(10, count + w);
-////		noinspection MismatchedReadAndWriteOfArray
 		Uri[] uris = new Uri[s];
 		if (w > 0) uris[w - 1] = uri;
-//		if (uris.length - 1 >= 0) System.arraycopy(ux, 1 - w, uris, 1, uris.length - 1);
-//		System.arraycopy(ux, 0, uris, w, uris.length - w);
-//		for (int i = w; i < s; i++)
-//			uris[i] = ux[i - w];
-//		System.arraycopy();
 		System.arraycopy(ux, 0, uris, w, s - w);
 		recentUri = uris;
 		String[] x = new String[recentUri.length];
 		for (int i = 0; i < recentUri.length; i++) x[i] = recentUri[i].toString();
 		preferences.edit().putStringSet(KEY_CFG_RECENT, new HashSet<>(Arrays.asList(x))).apply();
+	}
+
+	private static byte[] removeZero(byte[] b) {
+		final byte zero = 0x00;
+		while (b[b.length - 1] == zero) {
+			byte[] c = new byte[b.length - 1];
+			System.arraycopy(b, 0, c, 0, c.length);
+			b = c;
+		}
+		return b;
 	}
 }

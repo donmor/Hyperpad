@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_file">ファイル</string>
+    <string name="action_new">新規作成</string>
+    <string name="action_open">開く</string>
+    <string name="action_recent">最近使用したファイル</string>
+    <string name="action_save">保存</string>
+    <string name="action_save_as">名前を付けて保存</string>
+    <string name="action_about">Hyperpad について</string>
+    <string name="action_close">閉じる</string>
+    <string name="action_edit">編集</string>
+    <string name="action_undo">元に戻す</string>
+    <string name="action_redo">やり直し</string>
+    <string name="action_view">表示</string>
+    <string name="action_find">検索</string>
+    <string name="action_goto">行番号へ行く</string>
+    <string name="action_line_break">改行コード</string>
+    <string name="action_encoding">エンコード</string>
+    <string name="action_status_bar">ステータスバー</string>
+    <string name="action_warp_text">ワードラップ</string>
+    <string name="action_font_monospace">等幅フォント</string>
+    <string name="action_font_size">フォントサイズ</string>
+    <string name="action_statistics">統計</string>
+    <string name="do_not_save">変更を破棄</string>
+    <string name="err_load_file">ファイルの読み込み中にエラーが発生しました</string>
+    <string name="err_write_file">ファイルの書き込み中にエラーが発生しました</string>
+    <string name="file_save_confirm">ファイルへの変更を保存しますか？</string>
+    <string name="find_find">検索</string>
+    <string name="find_replace">置き換え</string>
+    <string name="find_replace_all">すべて置き換え</string>
+    <string name="find_down">下</string>
+    <string name="find_up">上</string>
+    <string name="find_not_found">キーワードが見つかりません</string>
+    <string name="find_replaced">$x 件の一致を置き換えました。</string>
+    <string name="goto_hint">行番号</string>
+    <string name="statistics_char">\n文字数\n\n</string>
+    <string name="statistics_word">\n\n単語数\n\n</string>
+    <string name="statistics_line">\n\n行数\n\n</string>
+    <string name="about">
+        Hyperpadは、メモ帳の主な機能を単に実装するアプリです。 アプリを開き、何かを書いて保存します。 それで全部です。\n
+        \n
+        このアプリはGPLv2ライセンスの下でリリースされています、\n
+        （1）商用利用\n
+        （2）修正する\n
+        （3）配付\n
+        （4）私的使用\n
+        は、これらの条件で許可されています：\n
+        （1）このライセンスと著作権表示の提供\n
+        （2）変更の宣言\n
+        （3）同じライセンスを使用して\n
+        （4）ソースコードを公開します\n
+        \n
+        このアプリは、 unicode.org / icu を使用して、テキストファイルのエンコードを検出します。 ライセンスファイルはコードと一緒に提供されます。\n
+        \n
+        このアプリの詳細については、https://github.com/donmor/Hyperpad をご覧ください。
+    </string>
+</resources>

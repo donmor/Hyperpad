@@ -9,7 +9,6 @@ import android.text.TextWatcher;
 import android.text.style.UnderlineSpan;
 import android.util.AttributeSet;
 import android.util.SparseArray;
-import android.view.AbsSavedState;
 import android.view.KeyEvent;
 
 import androidx.annotation.IntRange;
@@ -19,25 +18,26 @@ import androidx.appcompat.widget.AppCompatEditText;
 
 import java.util.Objects;
 
+@SuppressWarnings("RegExpRedundantEscape")
 public class EditorView extends AppCompatEditText {
 
-	public static final String KEY_LOG = ".LOG\n\n";
+	private static final String
+			KEY_LOG = ".LOG\n\n",
+			LINE_BREAK_LF = "\n",
+			STAT_SPLIT = "( |;|\\||\\|\\.|,|:|<|>|'|\"|/|\\?|!|\n|\t|\\{|\\}|\\(|\\)|\\[|\\])+";
 
 	EditorCallback editorCallback = null;
-	HistoryListener historyListener;
 	EditHistory currentState;
-	Context context;
 
-	boolean historyOperating;
-	int cleanIndex = 0,
-			maxSteps = 100;
+	private boolean historyOperating;
+	private int cleanIndex = 0;
+
+	private static final int MAX_STEPS = 100;
 
 	public EditorView(final Context context, AttributeSet attrs) {
 		super(context, attrs);
-		this.context = context;
-		historyListener = new HistoryListener();
 		currentState = new EditHistory(-1, null, null);
-		addTextChangedListener(historyListener);
+		addTextChangedListener(new HistoryListener());
 	}
 
 	boolean find(String key) {
@@ -106,7 +106,8 @@ public class EditorView extends AppCompatEditText {
 						return onTextContextMenuItem(android.R.id.redo);
 					}
 				case KeyEvent.KEYCODE_S:
-					return editorCallback.save();
+					editorCallback.save();
+					return true;
 				default:
 					return super.onKeyDown(keyCode, event);
 			}
@@ -186,7 +187,7 @@ public class EditorView extends AppCompatEditText {
 			h.past = currentState;
 			currentState.next = h;
 			currentState = h;
-			purgeHistoryPast(currentState, maxSteps);
+			purgeHistoryPast(currentState, MAX_STEPS);
 		}
 
 		public void afterTextChanged(Editable s) {
@@ -196,12 +197,12 @@ public class EditorView extends AppCompatEditText {
 		}
 	}
 
-	void purgeHistoryNext(EditHistory t) {
+	private void purgeHistoryNext(EditHistory t) {
 		if (t.next != null && t.next.next != null) purgeHistoryNext(t.next);
 		t.next = null;
 	}
 
-	void purgeHistoryPast(@NonNull EditHistory t, @IntRange(from = 0) int steps) {
+	private void purgeHistoryPast(@NonNull EditHistory t, @IntRange(from = 0) int steps) {
 		if (steps > t.index) return;
 		if (t.past != null && t.past.past != null) purgeHistoryPast(t.past, steps - 1);
 		if (t.past != null && steps <= 0) t.past = null;
@@ -216,11 +217,10 @@ public class EditorView extends AppCompatEditText {
 		editorCallback.setModified(isModified());
 	}
 
-	void resetHistory(boolean newDoc) {
+	private void resetHistory() {
 		purgeHistoryPast(currentState, 0);
 		purgeHistoryNext(currentState);
 		currentState = new EditHistory(-1, null, null);
-		if (!newDoc) currentState.index = 1;
 		cleanIndex = 0;
 		editorCallback.setCanUndo(false);
 		editorCallback.setCanRedo(false);
@@ -229,14 +229,14 @@ public class EditorView extends AppCompatEditText {
 
 	void resetAll() {
 		getEditableText().clear();
-		resetHistory(true);
+		resetHistory();
 	}
 
-	boolean getCanUndo() {
+	private boolean getCanUndo() {
 		return currentState.past != null;
 	}
 
-	boolean getCanRedo() {
+	private boolean getCanRedo() {
 		return currentState.next != null;
 	}
 
@@ -275,112 +275,40 @@ public class EditorView extends AppCompatEditText {
 	}
 
 	void loadContent(final CharSequence content) {
-		resetHistory(true);
-//		final ProgressDialog dialog = new ProgressDialog(context);
-//		dialog.setMessage("");
-//		dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-//		dialog.setCanceledOnTouchOutside(false);
-//		final Thread thread = new Thread(new Runnable() {
-//			@Override
-//			public void run() {
-//		dialog.show();
+		resetHistory();
 		historyOperating = true;
-//		new OpenSync(this);
-//
-//		int buf = MainActivity.BUF_SIZE;
-//		if (buf >= content.length()) setText(content);
-//		else {
-//			int r = content.length() / buf, d = content.length() % buf;
-//			setText(content.subSequence(0, buf));
-//			for (int i = 1; i < r; i++) {
-//				append(content.subSequence(i * buf, (i + 1) * buf));
-//			}
-//			append(content.subSequence(r * buf, r * buf + d));
-//		}
 		setText(content);
 		historyOperating = false;
-//		dialog.dismiss();
 		setSelection(0);
 		requestFocus();
-//			}
-//		});
-//		dialog.setButton(DialogInterface.BUTTON_NEGATIVE, context.getText(android.R.string.cancel), new DialogInterface.OnClickListener() {
-//			@Override
-//			public void onClick(DialogInterface dialogInterface, int i) {
-//				dialog.cancel();
-//			}
-//		});
-//		dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-//			@Override
-//			public void onShow(DialogInterface dialog) {
-//				thread.start();
-//			}
-//		});
-//		dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
-//			@Override
-//			public void onCancel(DialogInterface dialogInterface) {
-//				thread.interrupt();
-//			}
-//		});
-//		dialog.show();
 	}
 
 	boolean isLog() {
 		return Objects.requireNonNull(getText()).toString().startsWith(KEY_LOG);
 	}
 
-//	private static class OpenSync extends AsyncTask<CharSequence, Integer, String> {
-//
-//		private final WeakReference<EditorView> parent;
-//
-//		OpenSync(EditorView view) {
-//			this.parent = new WeakReference<>(view);
-//		}
-//
-//		@Override
-//		protected String doInBackground(CharSequence... params) {
-//			runOnU
-//			parent.get().setText(params[0]);
-//			return null;
-//		}
-//	}
-
-//	void loadContent(final byte[] content, String encoding) {
-//		resetHistory();
-//		historyOperating = true;
-//
-//		text.clear();
-//
-//		BufferedReader reader = null;
-//		try {
-//			reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(content), encoding));
-//			int length, lenTotal = 0;
-//
-//			char[] v = new char[MainActivity.BUF_SIZE];
-//			while ((length = reader.read(v, lenTotal, MainActivity.BUF_SIZE)) != -1) {
-//				lenTotal+=length;
-//				StringBuilder builder =
-//				append(v,0,length);
-//			}
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		} finally {
-//			if (reader != null) try {
-//				reader.close();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//
-//		historyOperating = false;
-//		setSelection(0);
-//		requestFocus();
-//	}
+	int[] statistics() {
+		int[] s = new int[3];
+		Editable e = getText();
+		if (e != null) {
+			String str = e.toString();
+			s[0] = str.length();
+			s[1] = s[0] > 0 ? str.split(STAT_SPLIT).length : 0;
+			s[2] = 1;
+			int i = 0, k;
+			while ((k = str.indexOf(LINE_BREAK_LF, i)) >= 0) {
+				s[2]++;
+				i = k + 1;
+			}
+		}
+		return s;
+	}
 
 	class EditHistory {
 		EditHistory next, past = null;
-		CharSequence content, contentBefore;
-		int p;
+		final CharSequence content;
+		final CharSequence contentBefore;
+		final int p;
 		int index = 0;
 
 		EditHistory(int p, CharSequence content, CharSequence contentBefore) {
@@ -391,7 +319,7 @@ public class EditorView extends AppCompatEditText {
 	}
 
 	interface EditorCallback {
-		boolean save();
+		void save();
 
 		void setCanUndo(boolean val);
 
@@ -405,15 +333,6 @@ public class EditorView extends AppCompatEditText {
 	void setEditorCallback(EditorCallback callback) {
 		editorCallback = callback;
 	}
-
-	protected Parcelable onSaveInstantState() {
-		return AbsSavedState.EMPTY_STATE;
-	}
-
-//	@Override
-//	public void saveHierarchyState(SparseArray<Parcelable> container) {
-//
-//	}
 
 	@Override
 	protected void dispatchSaveInstanceState(SparseArray<Parcelable> container) {

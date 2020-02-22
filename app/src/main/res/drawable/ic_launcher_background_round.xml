@@ -8,15 +8,15 @@
     tools:ignore="VectorRaster">
     <path
         android:fillColor="#0099CC"
-        android:pathData="M0,0h108v108h-108z" />
+        android:pathData="M0 0H108V108H0Z" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M22,29L86,29"
+        android:pathData="M38,29L70,29"
         android:strokeWidth="0.8"
         android:strokeColor="#33FFFFFF" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M22,39L86,39"
+        android:pathData="M26,39L82,39"
         android:strokeWidth="0.8"
         android:strokeColor="#33FFFFFF" />
     <path
@@ -31,12 +31,12 @@
         android:strokeColor="#33FFFFFF" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M22,69L86,69"
+        android:pathData="M26,69L82,69"
         android:strokeWidth="0.8"
         android:strokeColor="#33FFFFFF" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M22,79L86,79"
+        android:pathData="M38,79L70,79"
         android:strokeWidth="0.8"
         android:strokeColor="#33FFFFFF" />
 </vector>

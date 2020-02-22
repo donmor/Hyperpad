@@ -6,11 +6,10 @@ android {
     defaultConfig {
         applicationId "top.donmor.hyperpad"
         minSdkVersion 19
-//        minSdkVersion 14
         targetSdkVersion 29
         versionCode 1
-        versionName "1.0"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.internal.runner.junit4.AndroidJUnit4ClassRunner"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
