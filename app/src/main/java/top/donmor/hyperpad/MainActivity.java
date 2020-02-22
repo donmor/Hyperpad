@@ -754,7 +754,6 @@ public class MainActivity extends AppCompatActivity {
 		ByteArrayOutputStream os = null;
 		boolean retry = false;
 		try {
-			File file = new File(uri.toString());
 			is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(uri)));
 			os = new ByteArrayOutputStream(BUF_SIZE);
 			int len = is.available();
@@ -778,7 +777,7 @@ public class MainActivity extends AppCompatActivity {
 				fileLog();
 			setRecent(current);
 			current = uri;
-			currentFilename = file.getName();
+			currentFilename = Objects.requireNonNull(DocumentFile.fromSingleUri(this, uri)).getName();
 			encoding = match.getName();
 			String content = match.getString();
 			if (!retry) {
