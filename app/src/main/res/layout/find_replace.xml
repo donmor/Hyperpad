@@ -22,29 +22,41 @@
 
         <ImageButton
             android:id="@+id/find_down"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
             android:contentDescription="@string/find_down"
             app:srcCompat="@drawable/ic_arrow_downward" />
 
         <ImageButton
             android:id="@+id/find_up"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
             android:contentDescription="@string/find_up"
             app:srcCompat="@drawable/ic_arrow_upward" />
 
+        <ToggleButton
+            android:id="@+id/find_case_sensitive"
+            style="@android:style/Widget.DeviceDefault.Button.Toggle"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/find_case_sensitive"
+            android:drawableBottom="@drawable/ic_case_sensitive"
+            android:gravity="center"
+            android:textOff=""
+            android:textOn=""
+            android:textSize="0sp" />
+
         <ImageButton
             android:id="@+id/find_replace_sw"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
             android:contentDescription="@string/find_replace"
             app:srcCompat="@drawable/ic_find_replace" />
 
         <ImageButton
             android:id="@+id/find_close"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
             android:contentDescription="@string/action_close"
             app:srcCompat="@drawable/ic_close" />
 
@@ -68,15 +80,15 @@
 
         <ImageButton
             android:id="@+id/find_replace"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
             android:contentDescription="@string/find_replace"
             app:srcCompat="@drawable/ic_find_replace" />
 
         <ImageButton
             android:id="@+id/find_replace_all"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
             android:contentDescription="@string/find_replace_all"
             app:srcCompat="@drawable/ic_find_replace_all" />
 

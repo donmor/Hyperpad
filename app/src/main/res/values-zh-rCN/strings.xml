@@ -6,6 +6,7 @@
     <string name="action_recent">最近使用的文件</string>
     <string name="action_save">保存</string>
     <string name="action_save_as">另存为</string>
+    <string name="action_print">打印</string>
     <string name="action_about">关于 Hyperpad</string>
     <string name="action_close">关闭</string>
     <string name="action_edit">编辑</string>
@@ -28,6 +29,7 @@
     <string name="find_find">查找</string>
     <string name="find_replace">替换</string>
     <string name="find_replace_all">全部替换</string>
+    <string name="find_case_sensitive">区分大小写</string>
     <string name="find_down">向下</string>
     <string name="find_up">向上</string>
     <string name="find_not_found">未找到匹配</string>

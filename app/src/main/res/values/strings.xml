@@ -7,6 +7,7 @@
     <string name="action_recent">Recent</string>
     <string name="action_save">Save</string>
     <string name="action_save_as">Save as</string>
+    <string name="action_print">Print</string>
     <string name="action_about">About Hyperpad</string>
     <string name="action_close">Close</string>
     <string name="action_edit">Edit</string>
@@ -29,6 +30,7 @@
     <string name="find_find">Find</string>
     <string name="find_replace">Replace</string>
     <string name="find_replace_all">All</string>
+    <string name="find_case_sensitive">Case Sensitive</string>
     <string name="find_down">Down</string>
     <string name="find_up">Up</string>
     <string name="find_not_found">Keyword not found</string>

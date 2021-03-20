@@ -6,6 +6,7 @@
     <string name="action_recent">最近使用したファイル</string>
     <string name="action_save">保存</string>
     <string name="action_save_as">名前を付けて保存</string>
+    <string name="action_print">プリントする</string>
     <string name="action_about">Hyperpad について</string>
     <string name="action_close">閉じる</string>
     <string name="action_edit">編集</string>
@@ -28,6 +29,7 @@
     <string name="find_find">検索</string>
     <string name="find_replace">置き換え</string>
     <string name="find_replace_all">すべて置き換え</string>
+    <string name="find_case_sensitive">大文字小文字を区別する</string>
     <string name="find_down">下</string>
     <string name="find_up">上</string>
     <string name="find_not_found">キーワードが見つかりません</string>
