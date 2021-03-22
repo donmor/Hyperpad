@@ -48,7 +48,6 @@ android {
             versionNameSuffix "@" + getCommitHash()
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.donmor
         }
     }
 }

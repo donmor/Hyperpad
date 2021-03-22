@@ -867,7 +867,7 @@ public class MainActivity extends AppCompatActivity {
 //    }
 
 	private void receiveContent(Intent intent) {
-		newDoc(intent.getStringExtra(Intent.EXTRA_TEXT), intent.getStringExtra(Intent.EXTRA_TITLE));
+		newDoc(intent.getStringExtra(Intent.EXTRA_TEXT), intent.getStringExtra(Intent.EXTRA_SUBJECT));
 	}
 
 	//载入文件
