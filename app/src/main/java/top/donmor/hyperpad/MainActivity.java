@@ -33,18 +33,19 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowInsetsController;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -191,10 +192,16 @@ public class MainActivity extends AppCompatActivity {
 		setSupportActionBar(toolbar);
 		this.setTitle(R.string.app_name);
 		toolbar.setSubtitle(currentFilename);
-		//沉浸式状态栏，至少API23
+		//沉浸式双栏
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-			getWindow().setStatusBarColor(getColor(R.color.design_default_color_primary));
-			getWindow().getDecorView().setSystemUiVisibility((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : View.SYSTEM_UI_FLAG_VISIBLE);
+			Window window = getWindow();
+			window.setStatusBarColor(getColor(R.color.design_default_color_primary));
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+				window.setNavigationBarColor(getColor(R.color.design_default_color_primary));
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES)
+				window.getInsetsController().setSystemBarsAppearance(WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS | WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS | WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+			else
+				window.getDecorView().setSystemUiVisibility((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : View.SYSTEM_UI_FLAG_VISIBLE) : View.SYSTEM_UI_FLAG_VISIBLE);
 		}
 		//编辑器初始化
 		editor = findViewById(R.id.editor_view);
@@ -301,53 +308,8 @@ public class MainActivity extends AppCompatActivity {
 	private void viewDoc(Intent intent) {
 		Uri uri = intent.getData();
 		if (KEY_SCH_CONTENT.equals(intent.getScheme()) || KEY_SCH_FILE.equals(intent.getScheme())) {
-//        if (KEY_SCH_CONTENT.equals(intent.getScheme())) {
 			if (uri != null) openDoc(uri);
 		}
-//        else if (KEY_SCH_FILE.equals(intent.getScheme())) {   //处理File协议，只读新建
-//            ActivityCompat.requestPermissions(this, KEY_LEGACY_PERMISSIONS, 101);
-//            BufferedInputStream is = null;
-//            ByteArrayOutputStream os = null;
-//            try {
-//                is = new BufferedInputStream(new FileInputStream(uri.getPath()));
-//                os = new ByteArrayOutputStream(BUF_SIZE);
-//                int len = is.available();
-//                int length, lenTotal = 0;
-//                byte[] b = new byte[BUF_SIZE];
-//                while ((length = is.read(b)) != -1) {
-//                    os.write(b, 0, length);
-//                    lenTotal += length;
-//                }
-//                os.flush();
-//                if (lenTotal != len) throw new IOException();
-//                b = os.toByteArray();
-//                is.close();
-//                os.close();
-//                CharsetDetector detector = new CharsetDetector();
-//                CharsetMatch[] matches = detector.setText(b).detectAll();
-//                if (matches == null || matches.length == 0) throw new IOException();
-//                CharsetMatch match = matches[0];
-//                encoding = CHARSET_DEFAULT;
-//                String content = match.getString();
-//                CharSequence sequence = trimLB(content);
-//                newDoc(sequence, uri.getLastPathSegment());
-//                updateStatusBar();
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//                Toast.makeText(this, R.string.err_load_file, Toast.LENGTH_SHORT).show();
-//            } finally {
-//                if (is != null) try {
-//                    is.close();
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//                if (os != null) try {
-//                    os.close();
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
 	}
 
 	//初始化菜单
@@ -365,8 +327,7 @@ public class MainActivity extends AppCompatActivity {
 				copy = menu.findItem(R.id.action_copy),
 				stat = menu.findItem(R.id.action_status_bar),
 				wrap = menu.findItem(R.id.action_wrap_text),
-				mono = menu.findItem(R.id.action_font_monospace),
-				print = menu.findItem(R.id.action_print);
+				mono = menu.findItem(R.id.action_font_monospace);
 		boolean canCp = editor.getSelectionStart() != editor.getSelectionEnd();
 		if (undo != null) undo.setEnabled(canUndo);
 		if (redo != null) redo.setEnabled(canRedo);
@@ -375,7 +336,6 @@ public class MainActivity extends AppCompatActivity {
 		if (stat != null) stat.setChecked(statusBar);
 		if (wrap != null) wrap.setChecked(this.wrap);
 		if (mono != null) mono.setChecked(this.mono);
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) print.setVisible(false);
 		return super.onMenuOpened(featureId, menu);
 	}
 
@@ -495,7 +455,7 @@ public class MainActivity extends AppCompatActivity {
 							editor.requestFocus();
 						}
 					});
-					final ToggleButton caseS = findViewById(R.id.find_case_sensitive);
+					final CheckBox caseS = findViewById(R.id.find_case_sensitive);
 					caseS.setChecked(editor.isFindCaseSensitive());
 					caseS.setOnClickListener(new View.OnClickListener() {
 						@Override
@@ -748,6 +708,7 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
+	//暂存状态，当被清理时
 	@Override
 	public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
 		super.onSaveInstanceState(savedInstanceState);
@@ -786,6 +747,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
+	//状态复原
 	@Override
 	public void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
 		super.onRestoreInstanceState(savedInstanceState);
@@ -889,7 +851,8 @@ public class MainActivity extends AppCompatActivity {
 			fileLog();
 		setRecent(current);
 		current = null;
-		currentFilename = fileName;
+		if (fileName != null && !fileName.isEmpty()) currentFilename = fileName;
+		else currentFilename = getString(android.R.string.untitled);
 		editor.resetAll();
 		if (content != null) editor.loadContent(content);
 		lineBreak = LINE_BREAK.LF;
@@ -1171,32 +1134,27 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void printText() {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-			WebView webView = new WebView(this);
-			webView.setWebViewClient(new WebViewClient() {
-				@Override
-				public boolean shouldOverrideUrlLoading(WebView view, String url) {
-					return false;
-				}
+		WebView webView = new WebView(this);
+		webView.setWebViewClient(new WebViewClient() {
+			@Override
+			public boolean shouldOverrideUrlLoading(WebView view, String url) {
+				return false;
+			}
 
-				@Override
-				public void onPageFinished(WebView view, String url) {
-					createWebPrintJob(view);
-					printWV.stopLoading();
-					printWV = null;
-				}
-			});
-			webView.loadDataWithBaseURL(null, getHTML(), TYPE_HTML, CHARSET_DEFAULT, null);
-//			String html = editor.getEditableText().toString();
-//			webView.loadDataWithBaseURL(null, html, TYPE_HTML, CHARSET_DEFAULT, null);
-			printWV = webView;
-		}
+			@Override
+			public void onPageFinished(WebView view, String url) {
+				createWebPrintJob(view);
+				printWV.stopLoading();
+				printWV = null;
+			}
+		});
+		webView.loadDataWithBaseURL(null, getHTML(), TYPE_HTML, CHARSET_DEFAULT, null);
+		printWV = webView;
 	}
 
-	@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 	private void createWebPrintJob(WebView webView) {
 		PrintManager printManager = (PrintManager) this.getSystemService(Context.PRINT_SERVICE);
-		PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter(currentFilename);
+		PrintDocumentAdapter printAdapter = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? webView.createPrintDocumentAdapter(currentFilename) : webView.createPrintDocumentAdapter();
 		printManager.print(currentFilename, printAdapter, new PrintAttributes.Builder().build());
 	}
 
@@ -1246,7 +1204,8 @@ public class MainActivity extends AppCompatActivity {
 				if (KEY_SCH_CONTENT.equals(u.getScheme()))
 					getContentResolver().openInputStream(u);
 				else if (KEY_SCH_FILE.equals(u.getScheme()))
-					if (u.getPath() == null || !new File(u.getPath()).canRead()) throw new FileNotFoundException();
+					if (u.getPath() == null || !new File(u.getPath()).canRead())
+						throw new FileNotFoundException();
 				if (!u.equals(uri)) ux[count++] = u;
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -1256,8 +1215,8 @@ public class MainActivity extends AppCompatActivity {
 		int w = uri != null ? 1 : 0;
 		int s = Math.min(10, count + w);
 		Uri[] uris = new Uri[s];
-		if (w > 0) uris[w - 1] = uri;
-		System.arraycopy(ux, 0, uris, w, s - w);
+		if (w > 0) uris[0] = uri;
+		System.arraycopy(ux, 0, uris, w, Math.min(10 - w, count));
 		recentUri = uris;
 		String[] x = new String[recentUri.length];
 		for (int i = 0; i < recentUri.length; i++) x[i] = recentUri[i].toString();
@@ -1275,12 +1234,13 @@ public class MainActivity extends AppCompatActivity {
 		return b;
 	}
 
+	//文本转HTML
 	private String getHTML() {
 		StringBuilder builder = new StringBuilder(KEY_HTML_HEADER1)
 				.append(currentFilename)
 				.append(KEY_HTML_HEADER2);
-		String[] arrp = editor.getEditableText().toString().split(LINE_BREAK.LF.s);
-		for (String p:arrp) builder.append(KEY_HTML_P1).append(p).append(KEY_HTML_P2);
+		String[] arrP = editor.getEditableText().toString().split(LINE_BREAK.LF.s);
+		for (String p : arrP) builder.append(KEY_HTML_P1).append(p).append(KEY_HTML_P2);
 		return builder.append(KEY_HTML_HEADER3).toString();
 	}
 }

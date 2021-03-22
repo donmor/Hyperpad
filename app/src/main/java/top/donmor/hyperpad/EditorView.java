@@ -18,13 +18,13 @@ import androidx.appcompat.widget.AppCompatEditText;
 
 import java.util.Objects;
 
-@SuppressWarnings("RegExpRedundantEscape")
 public class EditorView extends AppCompatEditText {
 
+	//常量
 	private static final String
 			KEY_LOG = ".LOG\n\n",
 			LINE_BREAK_LF = "\n",
-			STAT_SPLIT = "( |;|\\||\\|\\.|,|:|<|>|'|\"|/|\\?|!|\n|\t|\\{|\\}|\\(|\\)|\\[|\\])+";
+			STAT_SPLIT = "( |;|\\||\\|\\.|,|:|<|>|'|\"|/|\\?|!|\n|\t|\\{|}|\\(|\\)|\\[|])+";
 
 	EditorCallback editorCallback = null;
 	EditHistory currentState;
