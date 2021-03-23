@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
 				window.setNavigationBarColor(getColor(R.color.design_default_color_primary));
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES)
-				window.getInsetsController().setSystemBarsAppearance(WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS | WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS | WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+				Objects.requireNonNull(window.getInsetsController()).setSystemBarsAppearance(WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS | WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS | WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
 			else
 				window.getDecorView().setSystemUiVisibility((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : View.SYSTEM_UI_FLAG_VISIBLE) : View.SYSTEM_UI_FLAG_VISIBLE);
 		}
@@ -716,6 +716,8 @@ public class MainActivity extends AppCompatActivity {
 			dialog.dismiss();
 			dialog = null;
 		}
+		if (current != null && editor.isLog())
+			fileLog();
 		String id = UUID.randomUUID().toString();
 		File cacheFile = new File(getCacheDir(), id);
 		BufferedWriter writer = null;
@@ -770,7 +772,8 @@ public class MainActivity extends AppCompatActivity {
 				lineBreak = e == 1 ? LINE_BREAK.CRLF : e == 2 ? LINE_BREAK.CR : LINE_BREAK.LF;
 				encoding = preferences.getString(KEY_SIS_ENC, CHARSET_DEFAULT);
 				editor.loadContent(builder);
-				if (preferences.getBoolean(KEY_SIS_CHANGE, true)) editor.currentState.index = 1;
+				if (preferences.getBoolean(KEY_SIS_CHANGE, true)) editor.setDirty();
+//				if (preferences.getBoolean(KEY_SIS_CHANGE, true)) editor.currentState.index = 1;
 				editor.editorCallback.setModified(editor.isModified());
 			} catch (Exception e) {
 				e.printStackTrace();
