@@ -40,6 +40,12 @@
                 android:title="@string/action_save_as"
                 app:showAsAction="withText" />
             <item
+                android:id="@+id/action_share"
+                android:icon="@drawable/ic_share"
+                android:orderInCategory="100"
+                android:title="@string/action_share"
+                app:showAsAction="withText" />
+            <item
                 android:id="@+id/action_print"
                 android:icon="@drawable/ic_print"
                 android:orderInCategory="100"
@@ -98,10 +104,22 @@
                 android:title="@android:string/paste"
                 app:showAsAction="withText" />
             <item
+                android:id="@+id/action_delete"
+                android:icon="@drawable/ic_backspace"
+                android:orderInCategory="100"
+                android:title="@string/action_delete"
+                app:showAsAction="withText" />
+            <item
                 android:id="@+id/action_select_all"
                 android:icon="@drawable/ic_select_all"
                 android:orderInCategory="100"
                 android:title="@android:string/selectAll"
+                app:showAsAction="withText" />
+            <item
+                android:id="@+id/action_timestamp"
+                android:icon="@drawable/ic_plus_time"
+                android:orderInCategory="100"
+                android:title="@string/action_timestamp"
                 app:showAsAction="withText" />
         </menu>
     </item>

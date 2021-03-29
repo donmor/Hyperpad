@@ -1,5 +1,6 @@
 package top.donmor.hyperpad;
 
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.Parcelable;
@@ -11,13 +12,13 @@ import android.util.AttributeSet;
 import android.util.SparseArray;
 import android.view.KeyEvent;
 
-//import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.AppCompatEditText;
 
 import java.util.LinkedList;
 import java.util.Objects;
+
+import static android.content.Context.CLIPBOARD_SERVICE;
 
 public class EditorView extends AppCompatEditText {
 
@@ -25,26 +26,22 @@ public class EditorView extends AppCompatEditText {
 	private static final String
 			KEY_LOG = ".LOG\n\n",
 			LINE_BREAK_LF = "\n",
-			STAT_SPLIT = "( |;|\\||\\|\\.|,|:|<|>|'|\"|/|\\?|!|\n|\t|\\{|}|\\(|\\)|\\[|])+";
-
+			STAT_SPLIT = "([.\\\\ ;,:<>'\"/?!\t{}()\\[\\]|])+";
 	EditorCallback editorCallback = null;
-	//	EditHistory currentState;
 	private final LinkedList<EditHistory> histories;
 	private EditHistory cleanState;
 
 	private boolean historyOperating, findCaseSensitive = false;
-	private int
-//			cleanIndex = 0,
-			histIndex = 0;
+	private int histIndex = 0;
 
 	private static final int MAX_STEPS = 100;
+	private String finding = "";
 
 	public EditorView(final Context context, AttributeSet attrs) {
 		super(context, attrs);
 		histories = new LinkedList<>();
 		cleanState = new EditHistory(-1, null, null);
 		histories.add(cleanState);
-//		currentState = new EditHistory(-1, null, null);
 		addTextChangedListener(new HistoryListener());
 	}
 
@@ -54,6 +51,10 @@ public class EditorView extends AppCompatEditText {
 
 	public void setFindCaseSensitive(boolean findCaseSensitive) {
 		this.findCaseSensitive = findCaseSensitive;
+	}
+
+	boolean find() {
+		return find(finding);
 	}
 
 	boolean find(String key) {
@@ -68,7 +69,12 @@ public class EditorView extends AppCompatEditText {
 		if (p < 0) p = text.indexOf(key);
 		if (p < 0) return false;
 		setSelection(p, p + key.length());
+		requestFocus();
 		return true;
+	}
+
+	boolean findUp() {
+		return findUp(finding);
 	}
 
 	boolean findUp(String key) {
@@ -82,6 +88,7 @@ public class EditorView extends AppCompatEditText {
 		if (p < 0) p = text.lastIndexOf(key);
 		if (p < 0) return false;
 		setSelection(p, p + key.length());
+		requestFocus();
 		return true;
 	}
 
@@ -89,7 +96,7 @@ public class EditorView extends AppCompatEditText {
 		if (key.length() == 0) return false;
 		int start = getSelectionStart(), end = getSelectionEnd();
 		Editable text = getEditableText();
-		if (key.contentEquals(text.subSequence(start, end))) {
+		if ((findCaseSensitive ? key : key.toLowerCase()).contentEquals((findCaseSensitive ? text : text.toString().toLowerCase()).subSequence(start, end))) {
 			text.replace(start, end, content);
 			setSelection(start + content.length());
 		}
@@ -107,53 +114,99 @@ public class EditorView extends AppCompatEditText {
 		return i;
 	}
 
-	@RequiresApi(api = Build.VERSION_CODES.M)
 	@Override
 	public boolean onKeyDown(int keyCode, @NonNull KeyEvent event) {
+		return onKey(keyCode, event, super.onKeyDown(keyCode, event));
+	}
 
-		if (event.isCtrlPressed()) {
+	public boolean onKey(int keyCode, @NonNull KeyEvent event, boolean fallback) {
+		boolean canCp = getSelectionStart() != getSelectionEnd();
+		if (!event.isCtrlPressed() && event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
 			switch (keyCode) {
-				case KeyEvent.KEYCODE_A:
-					return onTextContextMenuItem(android.R.id.selectAll);
-				case KeyEvent.KEYCODE_X:
-					return onTextContextMenuItem(android.R.id.cut);
-				case KeyEvent.KEYCODE_C:
-					return onTextContextMenuItem(android.R.id.copy);
+				case KeyEvent.KEYCODE_F:
+					editorCallback.invokeMenu(R.id.action_file);
+					return true;
+				case KeyEvent.KEYCODE_E:
+					editorCallback.invokeMenu(R.id.action_edit);
+					return true;
 				case KeyEvent.KEYCODE_V:
-					return onTextContextMenuItem(android.R.id.paste);
-				case KeyEvent.KEYCODE_Z:
-					if (canUndo()) {
-						return onTextContextMenuItem(android.R.id.undo);
-					}
-				case KeyEvent.KEYCODE_Y:
-					if (canRedo()) {
-						return onTextContextMenuItem(android.R.id.redo);
-					}
-				case KeyEvent.KEYCODE_N:
+					editorCallback.invokeMenu(R.id.action_view);
+					return true;
+			}
+		} else if (event.isCtrlPressed() && !event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			switch (keyCode) {
+				case KeyEvent.KEYCODE_N:    //新建
 					editorCallback.newDoc();
 					return true;
-				case KeyEvent.KEYCODE_O:
+				case KeyEvent.KEYCODE_O:    //打开
 					editorCallback.openDoc();
 					return true;
-				case KeyEvent.KEYCODE_S:
-					editorCallback.saveDoc();
+				case KeyEvent.KEYCODE_S:    //保存
+					editorCallback.save(false);
 					return true;
-				case KeyEvent.KEYCODE_P:
+				case KeyEvent.KEYCODE_P:    //打印
 					editorCallback.printDoc();
 					return true;
-				default:
-					return super.onKeyDown(keyCode, event);
+				case KeyEvent.KEYCODE_Q:    //退出
+					editorCallback.quit();
+					return true;
+				case KeyEvent.KEYCODE_Z:    //撤销
+					if (canUndo())
+						return onTextContextMenuItem(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? android.R.id.undo : 0);
+					break;
+				case KeyEvent.KEYCODE_Y:    //重做
+					if (canRedo())
+						return onTextContextMenuItem(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? android.R.id.redo : 0);
+					break;
+				case KeyEvent.KEYCODE_X:    //剪切
+					if (canCp) return onTextContextMenuItem(android.R.id.cut);
+					break;
+				case KeyEvent.KEYCODE_C:    //复制
+					if (canCp) return onTextContextMenuItem(android.R.id.copy);
+					break;
+				case KeyEvent.KEYCODE_V:    //粘贴
+					if (((ClipboardManager) getContext().getSystemService(CLIPBOARD_SERVICE)).hasPrimaryClip())
+						return onTextContextMenuItem(android.R.id.paste);
+					break;
+				case KeyEvent.KEYCODE_A:    //全选
+					return onTextContextMenuItem(android.R.id.selectAll);
+				case KeyEvent.KEYCODE_F:    //查找
+					editorCallback.find(false);
+					return true;
+				case KeyEvent.KEYCODE_H:    //替换
+					editorCallback.find(true);
+					return true;
+				case KeyEvent.KEYCODE_G:    //转到
+					editorCallback.gotoDialog();
+					return true;
 			}
-		} else {
-			if (keyCode == KeyEvent.KEYCODE_TAB) {
-				int start, end;
-				start = Math.max(getSelectionStart(), 0);
-				end = Math.max(getSelectionEnd(), 0);
-				getEditableText().replace(Math.min(start, end), Math.max(start, end), getResources().getString(R.string.char_tab));
+		} else if (event.isCtrlPressed() && !event.isAltPressed() && event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			if (keyCode == KeyEvent.KEYCODE_S) {    //另存为
+				editorCallback.save(true);
 				return true;
 			}
-			return super.onKeyDown(keyCode, event);
+		} else if (!event.isCtrlPressed() && !event.isAltPressed() && event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			if (keyCode == KeyEvent.KEYCODE_F3) {    //查找上一个
+				findUp();
+				return true;
+			}
+		} else if (!event.isCtrlPressed() && !event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			switch (keyCode) {
+				case KeyEvent.KEYCODE_TAB:    //插入制表符 (4 Spaces)
+					int start, end;
+					start = Math.max(getSelectionStart(), 0);
+					end = Math.max(getSelectionEnd(), 0);
+					getEditableText().replace(Math.min(start, end), Math.max(start, end), getResources().getString(R.string.char_tab));
+					return true;
+				case KeyEvent.KEYCODE_F5: //时间日期
+					editorCallback.timestamp();
+					return true;
+				case KeyEvent.KEYCODE_F3: //查找下一个
+					find();
+					return true;
+			}
 		}
+		return fallback;
 	}
 
 	@Override
@@ -198,6 +251,14 @@ public class EditorView extends AppCompatEditText {
 		}
 	}
 
+	public void setFinding(String str) {
+		finding = str;
+	}
+
+	public String getFinding() {
+		return finding;
+	}
+
 	private final class HistoryListener implements TextWatcher {
 
 		CharSequence beforeChange, afterChange;
@@ -216,66 +277,33 @@ public class EditorView extends AppCompatEditText {
 			}
 			afterChange = s.subSequence(start, start + count);
 			EditHistory h = new EditHistory(start, afterChange, beforeChange);
-//			h.index = currentState.index + 1;
-//			if (currentState.next != null) purgeHistoryNext(currentState);
-//			h.past = currentState;
-//			currentState.next = h;
-//			currentState = h;
-//			purgeHistoryPast(currentState, MAX_STEPS);
-
 			while (histIndex < histories.size() - 1) histories.removeLast();
 			histories.add(h);
 			while (histories.size() > MAX_STEPS + 1) histories.removeFirst();
 			histIndex = histories.indexOf(h);
-			System.out.println(histIndex);
 		}
 
 		public void afterTextChanged(Editable s) {
-			System.out.println(canUndo());
-			System.out.println(canRedo());
 			editorCallback.setModified(isModified());
 			editorCallback.setCanUndo(canUndo());
 			editorCallback.setCanRedo(canRedo());
 		}
 	}
 
-//	private void purgeHistoryNext(EditHistory t) {
-//		if (t.next != null && t.next.next != null) purgeHistoryNext(t.next);
-//		t.next = null;
-//	}
-//
-//	private void purgeHistoryPast(@NonNull EditHistory t, @IntRange(from = 0) int steps) {
-//		if (steps > t.index) return;
-//		if (t.past != null && t.past.past != null) purgeHistoryPast(t.past, steps - 1);
-//		if (t.past != null && steps <= 0) t.past = null;
-//	}
-
-//	boolean isModified() {
-//		return cleanIndex != currentState.index;
-//	}
-
 	boolean isModified() {
 		return cleanState == null || !histories.isEmpty() && cleanState != histories.get(histIndex);
 	}
 
 	void clearModified() {
-//		cleanIndex = currentState.index;
 		cleanState = histories.get(histIndex);
 		editorCallback.setModified(isModified());
 	}
 
-
 	private void resetHistory() {
-//		purgeHistoryPast(currentState, 0);
-//		purgeHistoryNext(currentState);
-//		currentState = new EditHistory(-1, null, null);
-
 		histories.clear();
 		cleanState = new EditHistory(-1, null, null);
 		histories.add(cleanState);
 		histIndex = 0;
-
-//		cleanIndex = 0;
 		editorCallback.setCanUndo(false);
 		editorCallback.setCanRedo(false);
 		editorCallback.setModified(false);
@@ -285,14 +313,6 @@ public class EditorView extends AppCompatEditText {
 		getEditableText().clear();
 		resetHistory();
 	}
-
-//	private boolean getCanUndo() {
-//		return currentState.past != null;
-//	}
-//
-//	private boolean getCanRedo() {
-//		return currentState.next != null;
-//	}
 
 	private boolean canUndo() {
 		return !histories.isEmpty() && histIndex > 0;
@@ -304,21 +324,6 @@ public class EditorView extends AppCompatEditText {
 
 	void undo() {
 		if (!canUndo()) return;
-//		if (!canUndo()) return;
-
-//		EditHistory past = currentState;
-//		currentState = currentState.past;
-//		int start = past.p;
-//		int end = start + (past.content != null ? past.content.length() : 0);
-//		Editable text = getEditableText();
-//		historyOperating = true;
-//		text.replace(start, end, past.contentBefore);
-//		historyOperating = false;
-//		for (Object o : text.getSpans(0, text.length(), UnderlineSpan.class)) {
-//			text.removeSpan(o);
-//		}
-//		Selection.setSelection(text, start, past.contentBefore == null ? start : (start + past.contentBefore.length()));
-
 		EditHistory past = histories.get(histIndex);
 		histIndex -= 1;
 		int start = past.p, end = start + (past.content != null ? past.content.length() : 0);
@@ -330,27 +335,10 @@ public class EditorView extends AppCompatEditText {
 			text.removeSpan(o);
 		}
 		Selection.setSelection(text, start, past.contentBefore == null ? start : (start + past.contentBefore.length()));
-		System.out.println(histIndex);
-		System.out.println(histories.size());
 	}
 
 	void redo() {
 		if (!canRedo()) return;
-//		if (!canRedo()) return;
-//		currentState = currentState.next;
-//		EditHistory next = currentState;
-//		int start = next.p;
-//		int end = start + (next.contentBefore != null ? next.contentBefore.length() : 0);
-//		Editable text = getEditableText();
-//		historyOperating = true;
-//		text.replace(start, end, next.content);
-//		historyOperating = false;
-//		for (Object o : text.getSpans(0,
-//				text.length(), UnderlineSpan.class)) {
-//			text.removeSpan(o);
-//		}
-//		Selection.setSelection(text, start, next.content == null ? start : (start + next.content.length()));
-
 		histIndex += 1;
 		EditHistory next = histories.get(histIndex);
 		int start = next.p, end = start + (next.contentBefore != null ? next.contentBefore.length() : 0);
@@ -363,8 +351,6 @@ public class EditorView extends AppCompatEditText {
 			text.removeSpan(o);
 		}
 		Selection.setSelection(text, start, next.content == null ? start : (start + next.content.length()));
-		System.out.println(histIndex);
-		System.out.println(histories.size());
 	}
 
 	void setDirty() {
@@ -383,9 +369,6 @@ public class EditorView extends AppCompatEditText {
 	boolean isLog() {
 		return Objects.requireNonNull(getText()).toString().startsWith(KEY_LOG) && (cleanState == null || cleanState.p >= 0);
 	}
-//	boolean isLog() {
-//		return Objects.requireNonNull(getText()).toString().startsWith(KEY_LOG) && (cleanIndex > 0);
-//	}
 
 	int[] statistics() {
 		int[] s = new int[3];
@@ -405,11 +388,9 @@ public class EditorView extends AppCompatEditText {
 	}
 
 	static class EditHistory {
-		//		EditHistory next, past = null;
 		final CharSequence content;
 		final CharSequence contentBefore;
 		final int p;
-//		int index = 0;
 
 		EditHistory(int p, CharSequence content, CharSequence contentBefore) {
 			this.p = p;
@@ -417,35 +398,46 @@ public class EditorView extends AppCompatEditText {
 			this.contentBefore = contentBefore;
 		}
 	}
-//	static class EditHistory {
-//		EditHistory next, past = null;
-//		final CharSequence content;
-//		final CharSequence contentBefore;
-//		final int p;
-//		int index = 0;
-//
-//		EditHistory(int p, CharSequence content, CharSequence contentBefore) {
-//			this.p = p;
-//			this.content = content;
-//			this.contentBefore = contentBefore;
-//		}
-//	}
 
+	//接口对主界面操作
 	interface EditorCallback {
+		//Alt打开菜单
+		void invokeMenu(int id);
+
+		//新建
 		void newDoc();
 
+		//打开
 		void openDoc();
 
-		void saveDoc();
+		//保存另存
+		void save(boolean a);
 
+		//打印
 		void printDoc();
 
+		//退出
+		void quit();
+
+		//时间戳
+		void timestamp();
+
+		//查找替换
+		void find(boolean replace);
+
+		//转到
+		void gotoDialog();
+
+		//菜单能否撤销
 		void setCanUndo(boolean val);
 
+		//菜单能否重做
 		void setCanRedo(boolean val);
 
+		//更新修改状态
 		void setModified(boolean val);
 
+		//更新选区
 		void selectionChange(int selStart, int selEnd);
 	}
 

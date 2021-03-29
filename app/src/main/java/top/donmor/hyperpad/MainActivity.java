@@ -3,6 +3,7 @@ package top.donmor.hyperpad;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -20,6 +21,7 @@ import android.text.InputType;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.LeadingMarginSpan;
@@ -76,6 +78,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -93,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
 
 	//常量
 	private static final String
-			CHARSET_DEFAULT = "UTF-8",
+			CHARSET_DEFAULT = StandardCharsets.UTF_8.name(),
 			KEY_CFG_FILE = "hyper.cfg",
 			KEY_CFG_STAT = "status_bar",
 			KEY_CFG_WRAP = "wrap",
@@ -101,7 +104,8 @@ public class MainActivity extends AppCompatActivity {
 			KEY_CFG_RECENT = "recent",
 			KEY_CFG_SIZE = "font_size",
 			KEY_FIND_TOAST = "$x",
-			KEY_LOG_SDF = "\nhh:mm yyyy/M/d\n",
+			KEY_SDF_LOG = "\nhh:mm yyyy/M/d\n",
+			KEY_SDF_TS = "hh:mm yyyy/M/d",
 			KEY_SIS = "sis",
 			KEY_SIS_CHANGE = "change",
 			KEY_SIS_CURRENT = "uri",
@@ -118,11 +122,13 @@ public class MainActivity extends AppCompatActivity {
 			KEY_MODIFIED = "* ",
 			KEY_SCH_FILE = "file",
 			KEY_SCH_CONTENT = "content",
+			KEY_URI_RATE = "market://details?id=",
 			LINE_COL_KEY = "(",
 			LINE_COL_KEY2 = ", ",
 			LINE_COL_KEY3 = ")",
 			LINE_COL_KEY4 = " ~ (",
 			TYPE_HTML = "text/html",
+			TYPE_TEXT = "text/plain",
 			TYPE_ALL = "*/*";
 	private static final int
 			BUF_SIZE = 8192,
@@ -137,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
 			SAF_SAVE = 43,
 			TAKE_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
 	private static final String[] KEY_LEGACY_PERMISSIONS = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
+	private Menu optMenu;
 
 	private enum LINE_BREAK {
 		LF("\n"), CR("\r"), CRLF("\r\n");
@@ -210,9 +217,14 @@ public class MainActivity extends AppCompatActivity {
 		editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 		editor.setEditorCallback(new EditorView.EditorCallback() {
 			@Override
+			public void invokeMenu(int id) {
+				optMenu.performIdentifierAction(id, 0);
+			}
+
+			@Override
 			public void newDoc() {
 				if (editor.isModified()) confirm(OPE_NEW);
-				else newDoc();
+				else MainActivity.this.newDoc();
 			}
 
 			@Override
@@ -222,14 +234,34 @@ public class MainActivity extends AppCompatActivity {
 			}
 
 			@Override
-			public void saveDoc() {
-				if (current == null) SAFSave();
+			public void save(boolean a) {
+				if (a || current == null) SAFSave();
 				else fileWrite();
 			}
 
 			@Override
 			public void printDoc() {
 				printText();
+			}
+
+			@Override
+			public void quit() {
+				MainActivity.this.onBackPressed();
+			}
+
+			@Override
+			public void timestamp() {
+				insertTimestamp();
+			}
+
+			@Override
+			public void find(boolean replace) {
+				invokeFindReplace(replace);
+			}
+
+			@Override
+			public void gotoDialog() {
+				MainActivity.this.gotoDialog();
 			}
 
 			@Override
@@ -316,23 +348,31 @@ public class MainActivity extends AppCompatActivity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.menu_main, menu);
+		optMenu = menu;
 		return true;
 	}
 
 	@Override
 	public boolean onMenuOpened(int featureId, Menu menu) {
-		MenuItem undo = menu.findItem(R.id.action_undo),
+		MenuItem share = menu.findItem(R.id.action_share),
+				undo = menu.findItem(R.id.action_undo),
 				redo = menu.findItem(R.id.action_redo),
 				cut = menu.findItem(R.id.action_cut),
 				copy = menu.findItem(R.id.action_copy),
+				paste = menu.findItem(R.id.action_paste),
+				del = menu.findItem(R.id.action_delete),
 				stat = menu.findItem(R.id.action_status_bar),
 				wrap = menu.findItem(R.id.action_wrap_text),
 				mono = menu.findItem(R.id.action_font_monospace);
 		boolean canCp = editor.getSelectionStart() != editor.getSelectionEnd();
+		if (share != null) share.setEnabled(editor.length() > 0);
 		if (undo != null) undo.setEnabled(canUndo);
 		if (redo != null) redo.setEnabled(canRedo);
 		if (cut != null) cut.setEnabled(canCp);
 		if (copy != null) copy.setEnabled(canCp);
+		if (paste != null)
+			paste.setEnabled(((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).hasPrimaryClip());
+		if (del != null) del.setEnabled(canCp);
 		if (stat != null) stat.setChecked(statusBar);
 		if (wrap != null) wrap.setChecked(this.wrap);
 		if (mono != null) mono.setChecked(this.mono);
@@ -340,7 +380,6 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	//菜单项
-	@SuppressLint("InflateParams")
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		final int
@@ -349,6 +388,7 @@ public class MainActivity extends AppCompatActivity {
 				idRecent = R.id.action_recent,
 				idSave = R.id.action_save,
 				idSaveAs = R.id.action_save_as,
+				idShare = R.id.action_share,
 				idPrint = R.id.action_print,
 				idAbout = R.id.action_about,
 				idClose = R.id.action_close,
@@ -357,7 +397,9 @@ public class MainActivity extends AppCompatActivity {
 				idCut = R.id.action_cut,
 				idCopy = R.id.action_copy,
 				idPaste = R.id.action_paste,
+				idDelete = R.id.action_delete,
 				idSelectAll = R.id.action_select_all,
+				idTimestamp = R.id.action_timestamp,
 				idFind = R.id.action_find,
 				idGoto = R.id.action_goto,
 				idLineBreak = R.id.action_line_break,
@@ -387,6 +429,13 @@ public class MainActivity extends AppCompatActivity {
 			case idSaveAs:
 				SAFSave();
 				break;
+			case idShare:
+				Editable editable = editor.getText();
+				if (editable != null) startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
+						.putExtra(Intent.EXTRA_SUBJECT, currentFilename)
+						.putExtra(Intent.EXTRA_TEXT, editable.toString())
+						.setType(TYPE_TEXT), null));
+				break;
 			case idPrint:
 				printText();
 				break;
@@ -396,6 +445,17 @@ public class MainActivity extends AppCompatActivity {
 				android.app.AlertDialog aboutDialog = new android.app.AlertDialog.Builder(this)
 						.setTitle(R.string.action_about)
 						.setMessage(spannableString)
+						.setPositiveButton(android.R.string.ok, null)
+						.setNeutralButton(R.string.market, new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialog, int which) {
+								try {
+									startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(KEY_URI_RATE + getPackageName())));
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+							}
+						})
 						.show();
 				((TextView) aboutDialog.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
@@ -419,110 +479,63 @@ public class MainActivity extends AppCompatActivity {
 			case idPaste:
 				editor.onTextContextMenuItem(android.R.id.paste);
 				break;
+			case idDelete:
+				int st = editor.getSelectionStart(), en = editor.getSelectionEnd();
+				if (st < en) editor.getEditableText().delete(st, en);
+				break;
 			case idSelectAll:
 				editor.onTextContextMenuItem(android.R.id.selectAll);
 				break;
+			case idTimestamp:
+				insertTimestamp();
+				break;
 			case idFind:    //查找替换
-				if (appbar.findViewById(R.id.find_replace_widget) == null) {
-					appbar.addView(LayoutInflater.from(this).inflate(R.layout.find_replace, null), 1);
-					final EditText find = findViewById(R.id.find_edit_find), replace = findViewById(R.id.find_edit_replace);
-					findViewById(R.id.find_replace_sw).setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							findViewById(R.id.find_replace_panel).setVisibility(View.VISIBLE);
-							v.setVisibility(View.GONE);
-						}
-					});
-					findViewById(R.id.find_close).setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							appbar.removeViewAt(1);
-						}
-					});
-					findViewById(R.id.find_down).setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							if (!editor.find(find.getText().toString()))
-								Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-							editor.requestFocus();
-						}
-					});
-					findViewById(R.id.find_up).setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							if (!editor.findUp(find.getText().toString()))
-								Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-							editor.requestFocus();
-						}
-					});
-					final CheckBox caseS = findViewById(R.id.find_case_sensitive);
-					caseS.setChecked(editor.isFindCaseSensitive());
-					caseS.setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							editor.setFindCaseSensitive(caseS.isChecked());
-						}
-					});
-					findViewById(R.id.find_replace).setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							if (!editor.replace(find.getText().toString(), replace.getText().toString()))
-								Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-							editor.requestFocus();
-						}
-					});
-					findViewById(R.id.find_replace_all).setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							Toast.makeText(MainActivity.this, getString(R.string.find_replaced).replace(KEY_FIND_TOAST, String.valueOf(editor.replaceAll(find.getText().toString(), replace.getText().toString()))), Toast.LENGTH_SHORT).show();
-							editor.requestFocus();
-						}
-					});
-				}
+				invokeFindReplace(false);
 				break;
 			case idGoto:
-				final EditText line = new EditText(this);
-				line.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-				line.setInputType(InputType.TYPE_CLASS_NUMBER);
-				line.setHint(R.string.goto_hint);
-				LinearLayout layout = new LinearLayout(this);
-				layout.setPadding(dialogPadding, 0, dialogPadding, 0);
-				layout.addView(line);
-				if (dialog != null) dialog.dismiss();
-				dialog = new AlertDialog.Builder(this)
-						.setTitle(R.string.action_goto)
-						.setView(layout)
-						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								if (line.length() == 0) return;
-								int x = Integer.parseInt(line.getText().toString());
-								if (x <= 0) return;
-								String content = editor.getEditableText().toString();
-								int p = 0;
-								for (int i = 0; i < x - 1; i++) {
-									int v = content.indexOf(LINE_BREAK.LF.s, p);
-									if (v >= 0) p = v + 1;
-								}
-								editor.setSelection(p);
-							}
-						})
-						.setOnDismissListener(new DialogInterface.OnDismissListener() {
-							@Override
-							public void onDismiss(DialogInterface dialog) {
-								editor.requestFocus();
-								MainActivity.this.dialog = null;
-							}
-						})
-						.create();
-				line.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-					@Override
-					public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-						dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-						return false;
-					}
-				});
-				dialog.show();
+//				final EditText line = new EditText(this);
+//				line.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+//				line.setInputType(InputType.TYPE_CLASS_NUMBER);
+//				line.setHint(R.string.goto_hint);
+//				LinearLayout layout = new LinearLayout(this);
+//				layout.setPadding(dialogPadding, 0, dialogPadding, 0);
+//				layout.addView(line);
+//				if (dialog != null) dialog.dismiss();
+//				dialog = new AlertDialog.Builder(this)
+//						.setTitle(R.string.action_goto)
+//						.setView(layout)
+//						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+//							@Override
+//							public void onClick(DialogInterface dialog, int which) {
+//								if (line.length() == 0) return;
+//								int x = Integer.parseInt(line.getText().toString());
+//								if (x <= 0) return;
+//								String content = editor.getEditableText().toString();
+//								int p = 0;
+//								for (int i = 0; i < x - 1; i++) {
+//									int v = content.indexOf(LINE_BREAK.LF.s, p);
+//									if (v >= 0) p = v + 1;
+//								}
+//								editor.setSelection(p);
+//							}
+//						})
+//						.setOnDismissListener(new DialogInterface.OnDismissListener() {
+//							@Override
+//							public void onDismiss(DialogInterface dialog) {
+//								editor.requestFocus();
+//								MainActivity.this.dialog = null;
+//							}
+//						})
+//						.create();
+//				line.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+//					@Override
+//					public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+//						dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+//						return false;
+//					}
+//				});
+//				dialog.show();
+				gotoDialog();
 				break;
 			case idLineBreak:
 				final int v = lineBreak == LINE_BREAK.CRLF ? 1 : lineBreak == LINE_BREAK.CR ? 2 : 0;
@@ -668,6 +681,139 @@ public class MainActivity extends AppCompatActivity {
 				break;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	private void insertTimestamp() {
+		editor.getEditableText().replace(editor.getSelectionStart(), editor.getSelectionEnd(), new SimpleDateFormat(KEY_SDF_TS, Locale.ENGLISH).format(new Date(System.currentTimeMillis())));
+	}
+
+	//查找替换
+	@SuppressLint("InflateParams")
+	private void invokeFindReplace(boolean r) {
+		if (appbar.findViewById(R.id.find_replace_widget) == null) {
+			appbar.addView(LayoutInflater.from(this).inflate(R.layout.find_replace, null), 1);
+			final EditText find = findViewById(R.id.find_edit_find), replace = findViewById(R.id.find_edit_replace);
+			find.setText(editor.getFinding());
+			find.addTextChangedListener(new TextWatcher() {
+				@Override
+				public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+				}
+
+				@Override
+				public void onTextChanged(CharSequence s, int start, int before, int count) {
+				}
+
+				@Override
+				public void afterTextChanged(Editable s) {
+					editor.setFinding(s.toString());
+				}
+			});
+			find.setOnKeyListener(new View.OnKeyListener() {
+				@Override
+				public boolean onKey(View v, int keyCode, KeyEvent event) {
+					return editor.onKey(keyCode, event, false);
+				}
+			});
+			findViewById(R.id.find_replace_sw).setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					findViewById(R.id.find_replace_panel).setVisibility(View.VISIBLE);
+					v.setVisibility(View.GONE);
+				}
+			});
+			findViewById(R.id.find_close).setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					appbar.removeViewAt(1);
+				}
+			});
+			findViewById(R.id.find_down).setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					if (!editor.find())
+						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
+					editor.requestFocus();
+				}
+			});
+			findViewById(R.id.find_up).setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					if (!editor.findUp())
+						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
+					editor.requestFocus();
+				}
+			});
+			final CheckBox caseS = findViewById(R.id.find_case_sensitive);
+			caseS.setChecked(editor.isFindCaseSensitive());
+			caseS.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					editor.setFindCaseSensitive(caseS.isChecked());
+				}
+			});
+			findViewById(R.id.find_replace).setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					if (!editor.replace(find.getText().toString(), replace.getText().toString()))
+						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
+					editor.requestFocus();
+				}
+			});
+			findViewById(R.id.find_replace_all).setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					Toast.makeText(MainActivity.this, getString(R.string.find_replaced).replace(KEY_FIND_TOAST, String.valueOf(editor.replaceAll(find.getText().toString(), replace.getText().toString()))), Toast.LENGTH_SHORT).show();
+					editor.requestFocus();
+				}
+			});
+		}
+		if (r) findViewById(R.id.find_replace_sw).callOnClick();
+
+	}
+
+	private void gotoDialog() {
+		final EditText line = new EditText(this);
+		line.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+		line.setInputType(InputType.TYPE_CLASS_NUMBER);
+		line.setHint(R.string.goto_hint);
+		LinearLayout layout = new LinearLayout(this);
+		layout.setPadding(dialogPadding, 0, dialogPadding, 0);
+		layout.addView(line);
+		if (dialog != null) dialog.dismiss();
+		dialog = new AlertDialog.Builder(this)
+				.setTitle(R.string.action_goto)
+				.setView(layout)
+				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						if (line.length() == 0) return;
+						int x = Integer.parseInt(line.getText().toString());
+						if (x <= 0) return;
+						String content = editor.getEditableText().toString();
+						int p = 0;
+						for (int i = 0; i < x - 1; i++) {
+							int v = content.indexOf(LINE_BREAK.LF.s, p);
+							if (v >= 0) p = v + 1;
+						}
+						editor.setSelection(p);
+					}
+				})
+				.setOnDismissListener(new DialogInterface.OnDismissListener() {
+					@Override
+					public void onDismiss(DialogInterface dialog) {
+						editor.requestFocus();
+						MainActivity.this.dialog = null;
+					}
+				})
+				.create();
+		line.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+			@Override
+			public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+				dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+				return false;
+			}
+		});
+		dialog.show();
 	}
 
 	//SAF执行结果
@@ -854,8 +1000,7 @@ public class MainActivity extends AppCompatActivity {
 			fileLog();
 		setRecent(current);
 		current = null;
-		if (fileName != null && !fileName.isEmpty()) currentFilename = fileName;
-		else currentFilename = getString(android.R.string.untitled);
+		currentFilename = fileName != null && !fileName.isEmpty() ? fileName : getString(android.R.string.untitled);
 		editor.resetAll();
 		if (content != null) editor.loadContent(content);
 		lineBreak = LINE_BREAK.LF;
@@ -1072,7 +1217,7 @@ public class MainActivity extends AppCompatActivity {
 			else if (KEY_SCH_FILE.equals(current.getScheme()))
 				os = new BufferedOutputStream(new FileOutputStream(current.getPath()));
 			sequence = setLB(sequence, lineBreak);
-			String s = sequence.toString() + new SimpleDateFormat(KEY_LOG_SDF, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
+			String s = sequence.toString() + new SimpleDateFormat(KEY_SDF_LOG, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
 			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s).array())));
 			len = is.available();
 			lenTotal = 0;
@@ -1146,19 +1291,15 @@ public class MainActivity extends AppCompatActivity {
 
 			@Override
 			public void onPageFinished(WebView view, String url) {
-				createWebPrintJob(view);
+				PrintManager printManager = (PrintManager) MainActivity.this.getSystemService(Context.PRINT_SERVICE);
+				PrintDocumentAdapter printAdapter = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? view.createPrintDocumentAdapter(currentFilename) : view.createPrintDocumentAdapter();
+				printManager.print(currentFilename, printAdapter, new PrintAttributes.Builder().build());
 				printWV.stopLoading();
 				printWV = null;
 			}
 		});
 		webView.loadDataWithBaseURL(null, getHTML(), TYPE_HTML, CHARSET_DEFAULT, null);
 		printWV = webView;
-	}
-
-	private void createWebPrintJob(WebView webView) {
-		PrintManager printManager = (PrintManager) this.getSystemService(Context.PRINT_SERVICE);
-		PrintDocumentAdapter printAdapter = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? webView.createPrintDocumentAdapter(currentFilename) : webView.createPrintDocumentAdapter();
-		printManager.print(currentFilename, printAdapter, new PrintAttributes.Builder().build());
 	}
 
 	//内部强制转为LF
@@ -1206,9 +1347,8 @@ public class MainActivity extends AppCompatActivity {
 			try {
 				if (KEY_SCH_CONTENT.equals(u.getScheme()))
 					getContentResolver().openInputStream(u);
-				else if (KEY_SCH_FILE.equals(u.getScheme()))
-					if (u.getPath() == null || !new File(u.getPath()).canRead())
-						throw new FileNotFoundException();
+				else if (KEY_SCH_FILE.equals(u.getScheme()) && (u.getPath() == null || !new File(u.getPath()).canRead()))
+					throw new FileNotFoundException();
 				if (!u.equals(uri)) ux[count++] = u;
 			} catch (Exception e) {
 				e.printStackTrace();

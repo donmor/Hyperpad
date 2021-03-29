@@ -6,12 +6,15 @@
     <string name="action_recent">最近使用的文件</string>
     <string name="action_save">保存</string>
     <string name="action_save_as">另存为</string>
+    <string name="action_share">分享</string>
     <string name="action_print">打印</string>
     <string name="action_about">关于 Hyperpad</string>
     <string name="action_close">关闭</string>
     <string name="action_edit">编辑</string>
     <string name="action_undo">撤销</string>
     <string name="action_redo">重做</string>
+    <string name="action_delete">删除</string>
+    <string name="action_timestamp">时间/日期</string>
     <string name="action_view">视图</string>
     <string name="action_find">查找</string>
     <string name="action_goto">转到</string>
@@ -38,22 +41,12 @@
     <string name="statistics_char">\n字符数\n\n</string>
     <string name="statistics_word">\n\n单词数\n\n</string>
     <string name="statistics_line">\n\n行数\n\n</string>
+    <string name="market">打分并评价</string>
     <string name="about">
 		Hyperpad是一款简单实现了记事本的主要功能的应用程序。打开本应用，写点什么，保存。就酱。\n
 		\n
-		本应用程序遵循GPLv2许可发布，\n
-		（1）商业用途\n
-		（2）修改\n
-		（3）分发\n
-		（4）私人使用\n
-		在这些条件下是允许的:\n
-		（1）提供此许可和版权声明\n
-		（2）声明改动\n
-		（3）开放源代码，\n
-		（4）使用相同的许可证\n
+		本应用程序遵循GPLv2许可发布，使用 unicode-org/icu 开源项目来检测文本文件的编码方式。许可证文件随源代码提供。\n
 		\n
-		本应用程序使用 unicode-org/icu 开源项目来检测文本文件的编码方式。许可证文件随源代码提供。\n
-		\n
-		有关本应用程序的更多详细信息，请访问https://github.com/donmor/Hyperpad。
+		有关本应用程序的更多详细信息，请访问项目页面（https://github.com/donmor/Hyperpad）或我的主页（https://donmor.top）。
 	</string>
 </resources>
