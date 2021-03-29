@@ -40,7 +40,7 @@ The localization of this app is currently provided by Google Translation. Pull r
 
 ### About us
 
-Thank you for trying donmor's productions. I'd appreciate it if you kindly support us via the buttons below, and take more effect to improve our productions.
+Thank you for trying donmor's productions. I'd really appreciate it if you kindly support us via the buttons below, and take more effect to improve our productions.
 
 &ensp;&ensp;<a href="https://liberapay.com/donmor3000/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg" height="30" /></a>&ensp;&ensp;<a href="https://donmor.top/#Alipay Donation"><img alt="Donate using Alipay" src="https://img.alipay.com/sys/personalprod/style/mc/btn-index.png" height="30" /></a>
 
