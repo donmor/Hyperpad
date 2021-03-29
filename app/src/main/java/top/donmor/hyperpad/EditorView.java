@@ -11,6 +11,7 @@ import android.text.style.UnderlineSpan;
 import android.util.AttributeSet;
 import android.util.SparseArray;
 import android.view.KeyEvent;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatEditText;
@@ -28,9 +29,7 @@ public class EditorView extends AppCompatEditText {
 	//常量
 	private static final String
 			KEY_LOG = ".LOG",
-//			KEY_SDF_LOG = "\nhh:mm yyyy/M/d\n",
 			KEY_SDF_TS = "hh:mm yyyy/M/d",
-//			LINE_BREAK_LF = "\n",
 			STAT_SPLIT = "([.\\\\ ;,:<>'\"/?!\t{}()\\[\\]|])+";
 	EditorCallback editorCallback = null;
 	private final LinkedList<EditHistory> histories;
@@ -58,12 +57,15 @@ public class EditorView extends AppCompatEditText {
 		this.findCaseSensitive = findCaseSensitive;
 	}
 
-	boolean find() {
-		return find(finding);
+	boolean notFound() {
+		return !find(finding);
 	}
 
 	boolean find(String key) {
-		if (key.length() == 0) return false;
+		if (key.length() == 0) {
+			requestFocus();
+			return false;
+		}
 		int start = getSelectionStart(), end = getSelectionEnd();
 		String text = getEditableText().toString();
 		if (!findCaseSensitive) {
@@ -78,12 +80,15 @@ public class EditorView extends AppCompatEditText {
 		return true;
 	}
 
-	boolean findUp() {
-		return findUp(finding);
+	boolean notFoundUp() {
+		return !findUp(finding);
 	}
 
 	boolean findUp(String key) {
-		if (key.length() == 0) return false;
+		if (key.length() == 0) {
+			requestFocus();
+			return false;
+		}
 		String text = getEditableText().toString();
 		if (!findCaseSensitive) {
 			key = key.toLowerCase();
@@ -192,7 +197,8 @@ public class EditorView extends AppCompatEditText {
 			}
 		} else if (!event.isCtrlPressed() && !event.isAltPressed() && event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
 			if (keyCode == KeyEvent.KEYCODE_F3) {    //查找上一个
-				findUp();
+				if (notFoundUp())
+					Toast.makeText(getContext(), R.string.find_not_found, Toast.LENGTH_SHORT).show();
 				return true;
 			}
 		} else if (!event.isCtrlPressed() && !event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
@@ -207,7 +213,8 @@ public class EditorView extends AppCompatEditText {
 					insertTimestamp();
 					return true;
 				case KeyEvent.KEYCODE_F3: //查找下一个
-					find();
+					if (notFound())
+						Toast.makeText(getContext(), R.string.find_not_found, Toast.LENGTH_SHORT).show();
 					return true;
 			}
 		}
@@ -216,25 +223,18 @@ public class EditorView extends AppCompatEditText {
 
 	@Override
 	public boolean onKeyUp(int keyCode, @NonNull KeyEvent event) {
-		if (event.isCtrlPressed()) {
-			switch (keyCode) {
-				case KeyEvent.KEYCODE_A:
-				case KeyEvent.KEYCODE_X:
-				case KeyEvent.KEYCODE_C:
-				case KeyEvent.KEYCODE_V:
-				case KeyEvent.KEYCODE_Z:
-				case KeyEvent.KEYCODE_Y:
-				case KeyEvent.KEYCODE_N:
-				case KeyEvent.KEYCODE_O:
-				case KeyEvent.KEYCODE_S:
-				case KeyEvent.KEYCODE_P:
-					return true;
-				default:
-					return false;
-			}
-		} else {
-			return keyCode == KeyEvent.KEYCODE_TAB;
+		if (!event.isCtrlPressed() && event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			return keyCode == KeyEvent.KEYCODE_F || keyCode == KeyEvent.KEYCODE_E || keyCode == KeyEvent.KEYCODE_V;
+		} else if (event.isCtrlPressed() && !event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			return keyCode == KeyEvent.KEYCODE_N || keyCode == KeyEvent.KEYCODE_O || keyCode == KeyEvent.KEYCODE_S || keyCode == KeyEvent.KEYCODE_P || keyCode == KeyEvent.KEYCODE_Q || keyCode == KeyEvent.KEYCODE_Z || keyCode == KeyEvent.KEYCODE_Y || keyCode == KeyEvent.KEYCODE_X || keyCode == KeyEvent.KEYCODE_C || keyCode == KeyEvent.KEYCODE_V || keyCode == KeyEvent.KEYCODE_A || keyCode == KeyEvent.KEYCODE_F || keyCode == KeyEvent.KEYCODE_H || keyCode == KeyEvent.KEYCODE_G;
+		} else if (event.isCtrlPressed() && !event.isAltPressed() && event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			return keyCode == KeyEvent.KEYCODE_S;
+		} else if (!event.isCtrlPressed() && !event.isAltPressed() && event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			return keyCode == KeyEvent.KEYCODE_F3;
+		} else if (!event.isCtrlPressed() && !event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
+			return keyCode == KeyEvent.KEYCODE_TAB || keyCode == KeyEvent.KEYCODE_F5 || keyCode == KeyEvent.KEYCODE_F3;
 		}
+		return false;
 	}
 
 	@Override
@@ -381,10 +381,6 @@ public class EditorView extends AppCompatEditText {
 		setSelection(0);
 		requestFocus();
 	}
-
-//	boolean isLog() {
-//		return Objects.requireNonNull(getText()).toString().startsWith(KEY_LOG) && (cleanState == null || cleanState.p >= 0);
-//	}
 
 	int[] statistics() {
 		int[] s = new int[3];

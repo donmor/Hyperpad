@@ -1,7 +1,6 @@
 package top.donmor.hyperpad;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -35,6 +34,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsetsController;
 import android.webkit.WebView;
@@ -70,20 +70,14 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-//import java.io.InputStream;
 import java.io.InputStreamReader;
-//import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-//import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-//import java.text.SimpleDateFormat;
 import java.util.Arrays;
-//import java.util.Date;
 import java.util.HashSet;
-//import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -157,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
 	//定义关键控件
 	private AppBarLayout appbar;
 	private Toolbar toolbar;
+	private View findReplace = null, statBar = null;
 	private EditorView editor;
 	private SharedPreferences preferences;
 	private AlertDialog dialog;
@@ -320,7 +315,6 @@ public class MainActivity extends AppCompatActivity {
 		String action = intent.getAction();
 
 		if (Intent.ACTION_VIEW.equals(action)) {
-//			if (current != null && current.equals(intent.getData())) return;
 			if (editor.isModified()) confirm(OPE_VIEW, intent);
 			else viewDoc(intent);
 		} else if (Intent.ACTION_SEND.equals(action)) {
@@ -486,48 +480,6 @@ public class MainActivity extends AppCompatActivity {
 				invokeFindReplace(false);
 				break;
 			case idGoto:
-//				final EditText line = new EditText(this);
-//				line.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-//				line.setInputType(InputType.TYPE_CLASS_NUMBER);
-//				line.setHint(R.string.goto_hint);
-//				LinearLayout layout = new LinearLayout(this);
-//				layout.setPadding(dialogPadding, 0, dialogPadding, 0);
-//				layout.addView(line);
-//				if (dialog != null) dialog.dismiss();
-//				dialog = new AlertDialog.Builder(this)
-//						.setTitle(R.string.action_goto)
-//						.setView(layout)
-//						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-//							@Override
-//							public void onClick(DialogInterface dialog, int which) {
-//								if (line.length() == 0) return;
-//								int x = Integer.parseInt(line.getText().toString());
-//								if (x <= 0) return;
-//								String content = editor.getEditableText().toString();
-//								int p = 0;
-//								for (int i = 0; i < x - 1; i++) {
-//									int v = content.indexOf(LINE_BREAK.LF.s, p);
-//									if (v >= 0) p = v + 1;
-//								}
-//								editor.setSelection(p);
-//							}
-//						})
-//						.setOnDismissListener(new DialogInterface.OnDismissListener() {
-//							@Override
-//							public void onDismiss(DialogInterface dialog) {
-//								editor.requestFocus();
-//								MainActivity.this.dialog = null;
-//							}
-//						})
-//						.create();
-//				line.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-//					@Override
-//					public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-//						dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-//						return false;
-//					}
-//				});
-//				dialog.show();
 				gotoDialog();
 				break;
 			case idLineBreak:
@@ -585,7 +537,10 @@ public class MainActivity extends AppCompatActivity {
 				statusBar = !item.isChecked();
 				item.setChecked(statusBar);
 				if (statusBar) loadStatusBar();
-				else appbar.removeView(appbar.findViewById(R.id.status_bar_widget));
+				else {
+					((ViewGroup) findViewById(R.id.status_bar_holder)).removeAllViews();
+					statBar = null;
+				}
 				preferences.edit().putBoolean(KEY_CFG_STAT, statusBar).apply();
 				break;
 			case idWrapText:
@@ -678,10 +633,10 @@ public class MainActivity extends AppCompatActivity {
 
 
 	//查找替换
-	@SuppressLint("InflateParams")
 	private void invokeFindReplace(boolean r) {
-		if (appbar.findViewById(R.id.find_replace_widget) == null) {
-			appbar.addView(LayoutInflater.from(this).inflate(R.layout.find_replace, null), 1);
+		if (findReplace == null) {
+			final ViewGroup holder = findViewById(R.id.find_replace_holder);
+			findReplace = LayoutInflater.from(this).inflate(R.layout.find_replace, holder);
 			final EditText find = findViewById(R.id.find_edit_find), replace = findViewById(R.id.find_edit_replace);
 			find.setText(editor.getFinding());
 			find.addTextChangedListener(new TextWatcher() {
@@ -714,23 +669,22 @@ public class MainActivity extends AppCompatActivity {
 			findViewById(R.id.find_close).setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					appbar.removeViewAt(1);
+					holder.removeAllViews();
+					findReplace = null;
 				}
 			});
 			findViewById(R.id.find_down).setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					if (!editor.find())
+					if (editor.notFound())
 						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-					editor.requestFocus();
 				}
 			});
 			findViewById(R.id.find_up).setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					if (!editor.findUp())
+					if (editor.notFoundUp())
 						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-					editor.requestFocus();
 				}
 			});
 			final CheckBox caseS = findViewById(R.id.find_case_sensitive);
@@ -825,17 +779,14 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 
-	@SuppressLint("InflateParams")
 	private void loadStatusBar() {
 		if (appbar.findViewById(R.id.status_bar_widget) == null) {
-			appbar.addView(LayoutInflater.from(this).inflate(R.layout.status_bar, null), appbar.getChildCount());
+			statBar = LayoutInflater.from(this).inflate(R.layout.status_bar, (ViewGroup) findViewById(R.id.status_bar_holder));
 			updateStatusBar();
 		}
 	}
 
 	private void updateStatusBar() {
-		if (appbar.findViewById(R.id.status_bar_widget) == null) return;
-		LinearLayout statBar = appbar.findViewById(R.id.status_bar_widget);
 		if (statBar == null) return;
 		editor.onSelectionChanged(editor.getSelectionStart(), editor.getSelectionEnd());
 		TextView lb = statBar.findViewById(R.id.status_bar_line_break), enc = statBar.findViewById(R.id.status_bar_encoding);
@@ -852,8 +803,6 @@ public class MainActivity extends AppCompatActivity {
 			dialog.dismiss();
 			dialog = null;
 		}
-//		if (current != null && editor.isLog())
-//			fileLog();
 		String id = UUID.randomUUID().toString();
 		File cacheFile = new File(getCacheDir(), id);
 		BufferedWriter writer = null;
@@ -909,7 +858,6 @@ public class MainActivity extends AppCompatActivity {
 				encoding = preferences.getString(KEY_SIS_ENC, CHARSET_DEFAULT);
 				editor.loadContent(builder);
 				if (preferences.getBoolean(KEY_SIS_CHANGE, true)) editor.setDirty();
-//				if (preferences.getBoolean(KEY_SIS_CHANGE, true)) editor.currentState.index = 1;
 				editor.editorCallback.setModified(editor.isModified());
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -937,8 +885,6 @@ public class MainActivity extends AppCompatActivity {
 	public void onBackPressed() {
 		if (editor.isModified()) confirm(OPE_CLOSE);
 		else {
-//			if (current != null && editor.isLog())
-//				fileLog();
 			setRecent(current);
 			super.onBackPressed();
 		}
@@ -986,8 +932,6 @@ public class MainActivity extends AppCompatActivity {
 
 	//新文档
 	private void newDoc(CharSequence content, String fileName) {
-//		if (current != null && editor.isLog())
-//			fileLog();
 		setRecent(current);
 		current = null;
 		currentFilename = fileName != null && !fileName.isEmpty() ? fileName : getString(android.R.string.untitled);
@@ -999,10 +943,6 @@ public class MainActivity extends AppCompatActivity {
 		editor.setSelection(0);
 		editor.requestFocus();
 	}
-
-//    private void openFileUri(Uri uri) {
-//
-//    }
 
 	private void receiveContent(Intent intent) {
 		newDoc(intent.getStringExtra(Intent.EXTRA_TEXT), intent.getStringExtra(Intent.EXTRA_SUBJECT));
@@ -1039,7 +979,6 @@ public class MainActivity extends AppCompatActivity {
 			CharsetMatch[] matches = detector.setText(b).detectAll();
 			if (matches == null || matches.length == 0) throw new IOException();
 			CharsetMatch match = matches[0];
-//			if (current != null && editor.isLog()) fileLog();
 			setRecent(current);   //处置上一文件并初始化新文件
 			current = uri;
 			currentFilename = filename;
@@ -1071,6 +1010,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
+	//历史记录
 	private void openRecent() {
 		setRecent();
 		final String[] items = new String[recentUri.length];
@@ -1177,71 +1117,6 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
-//	//.LOG时间戳
-//	private void fileLog() {
-//		InputStream is = null;
-//		OutputStream os = null;
-//		try {   //以当前状态读源文件并追加时间戳保存，无需检测CRLF/编码等
-//			if (KEY_SCH_CONTENT.equals(current.getScheme()))
-//				is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(current)));
-//			else if (KEY_SCH_FILE.equals(current.getScheme()))
-//				is = new BufferedInputStream(new FileInputStream(current.getPath()));
-//			else throw new FileNotFoundException();
-//			os = new ByteArrayOutputStream(BUF_SIZE);
-//			int len = is.available();
-//			int length, lenTotal = 0;
-//			byte[] b = new byte[BUF_SIZE];
-//			while ((length = is.read(b)) != -1) {
-//				os.write(b, 0, length);
-//				lenTotal += length;
-//			}
-//			os.flush();
-//			if (lenTotal != len) throw new IOException();
-//			b = ((ByteArrayOutputStream) os).toByteArray();
-//			is.close();
-//			os.close();
-//			String content = Charset.forName(encoding).decode(ByteBuffer.wrap(b)).toString();
-//			CharSequence sequence = trimLB(content);
-//			if (KEY_SCH_CONTENT.equals(current.getScheme()))
-//				os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(current)));
-//			else if (KEY_SCH_FILE.equals(current.getScheme()))
-//				os = new BufferedOutputStream(new FileOutputStream(current.getPath()));
-//			sequence = setLB(sequence, lineBreak);
-//			String s = sequence.toString() + new SimpleDateFormat(KEY_SDF_LOG, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
-//			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s).array())));
-//			len = is.available();
-//			lenTotal = 0;
-//			b = new byte[BUF_SIZE];
-//			while ((length = is.read(b)) != -1) {
-//				os.write(b, 0, length);
-//				lenTotal += length;
-//			}
-//			os.flush();
-//			if (lenTotal != len) throw new IOException();
-//			is.close();
-//			os.close();
-//			if (KEY_SCH_CONTENT.equals(current.getScheme())) try {
-//				getContentResolver().takePersistableUriPermission(current, TAKE_FLAGS);
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			Toast.makeText(this, R.string.err_write_file, Toast.LENGTH_SHORT).show();
-//		} finally {
-//			if (is != null) try {
-//				is.close();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//			if (os != null) try {
-//				os.close();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//	}
-
 	//保存文件后继续挂起的操作
 	private void processOperation(int operation, Intent intent) {
 		this.operation = OPE_EDIT;
@@ -1257,8 +1132,6 @@ public class MainActivity extends AppCompatActivity {
 				openRecent();
 				break;
 			case OPE_CLOSE:
-//				if (current != null && editor.isLog())
-//					fileLog();
 				setRecent(current);
 				super.onBackPressed();
 				break;
