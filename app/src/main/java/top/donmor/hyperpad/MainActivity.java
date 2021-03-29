@@ -70,20 +70,20 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+//import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
+//import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
+//import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
+//import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Date;
+//import java.util.Date;
 import java.util.HashSet;
-import java.util.Locale;
+//import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -104,8 +104,6 @@ public class MainActivity extends AppCompatActivity {
 			KEY_CFG_RECENT = "recent",
 			KEY_CFG_SIZE = "font_size",
 			KEY_FIND_TOAST = "$x",
-			KEY_SDF_LOG = "\nhh:mm yyyy/M/d\n",
-			KEY_SDF_TS = "hh:mm yyyy/M/d",
 			KEY_SIS = "sis",
 			KEY_SIS_CHANGE = "change",
 			KEY_SIS_CURRENT = "uri",
@@ -145,9 +143,9 @@ public class MainActivity extends AppCompatActivity {
 	private static final String[] KEY_LEGACY_PERMISSIONS = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
 	private Menu optMenu;
 
-	private enum LINE_BREAK {
+	enum LINE_BREAK {
 		LF("\n"), CR("\r"), CRLF("\r\n");
-		private final String s;
+		final String s;
 
 		LINE_BREAK(String s) {
 			this.s = s;
@@ -250,11 +248,6 @@ public class MainActivity extends AppCompatActivity {
 			}
 
 			@Override
-			public void timestamp() {
-				insertTimestamp();
-			}
-
-			@Override
 			public void find(boolean replace) {
 				invokeFindReplace(replace);
 			}
@@ -327,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
 		String action = intent.getAction();
 
 		if (Intent.ACTION_VIEW.equals(action)) {
-			if (current != null && current.equals(intent.getData())) return;
+//			if (current != null && current.equals(intent.getData())) return;
 			if (editor.isModified()) confirm(OPE_VIEW, intent);
 			else viewDoc(intent);
 		} else if (Intent.ACTION_SEND.equals(action)) {
@@ -487,7 +480,7 @@ public class MainActivity extends AppCompatActivity {
 				editor.onTextContextMenuItem(android.R.id.selectAll);
 				break;
 			case idTimestamp:
-				insertTimestamp();
+				editor.insertTimestamp();
 				break;
 			case idFind:    //查找替换
 				invokeFindReplace(false);
@@ -683,9 +676,6 @@ public class MainActivity extends AppCompatActivity {
 		return super.onOptionsItemSelected(item);
 	}
 
-	private void insertTimestamp() {
-		editor.getEditableText().replace(editor.getSelectionStart(), editor.getSelectionEnd(), new SimpleDateFormat(KEY_SDF_TS, Locale.ENGLISH).format(new Date(System.currentTimeMillis())));
-	}
 
 	//查找替换
 	@SuppressLint("InflateParams")
@@ -862,8 +852,8 @@ public class MainActivity extends AppCompatActivity {
 			dialog.dismiss();
 			dialog = null;
 		}
-		if (current != null && editor.isLog())
-			fileLog();
+//		if (current != null && editor.isLog())
+//			fileLog();
 		String id = UUID.randomUUID().toString();
 		File cacheFile = new File(getCacheDir(), id);
 		BufferedWriter writer = null;
@@ -947,8 +937,8 @@ public class MainActivity extends AppCompatActivity {
 	public void onBackPressed() {
 		if (editor.isModified()) confirm(OPE_CLOSE);
 		else {
-			if (current != null && editor.isLog())
-				fileLog();
+//			if (current != null && editor.isLog())
+//				fileLog();
 			setRecent(current);
 			super.onBackPressed();
 		}
@@ -996,8 +986,8 @@ public class MainActivity extends AppCompatActivity {
 
 	//新文档
 	private void newDoc(CharSequence content, String fileName) {
-		if (current != null && editor.isLog())
-			fileLog();
+//		if (current != null && editor.isLog())
+//			fileLog();
 		setRecent(current);
 		current = null;
 		currentFilename = fileName != null && !fileName.isEmpty() ? fileName : getString(android.R.string.untitled);
@@ -1049,8 +1039,8 @@ public class MainActivity extends AppCompatActivity {
 			CharsetMatch[] matches = detector.setText(b).detectAll();
 			if (matches == null || matches.length == 0) throw new IOException();
 			CharsetMatch match = matches[0];
-			if (current != null && editor.isLog()) fileLog();   //处置上一文件并初始化新文件
-			setRecent(current);
+//			if (current != null && editor.isLog()) fileLog();
+			setRecent(current);   //处置上一文件并初始化新文件
 			current = uri;
 			currentFilename = filename;
 			encoding = match.getName();
@@ -1187,70 +1177,70 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
-	//.LOG时间戳
-	private void fileLog() {
-		InputStream is = null;
-		OutputStream os = null;
-		try {   //以当前状态读源文件并追加时间戳保存，无需检测CRLF/编码等
-			if (KEY_SCH_CONTENT.equals(current.getScheme()))
-				is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(current)));
-			else if (KEY_SCH_FILE.equals(current.getScheme()))
-				is = new BufferedInputStream(new FileInputStream(current.getPath()));
-			else throw new FileNotFoundException();
-			os = new ByteArrayOutputStream(BUF_SIZE);
-			int len = is.available();
-			int length, lenTotal = 0;
-			byte[] b = new byte[BUF_SIZE];
-			while ((length = is.read(b)) != -1) {
-				os.write(b, 0, length);
-				lenTotal += length;
-			}
-			os.flush();
-			if (lenTotal != len) throw new IOException();
-			b = ((ByteArrayOutputStream) os).toByteArray();
-			is.close();
-			os.close();
-			String content = Charset.forName(encoding).decode(ByteBuffer.wrap(b)).toString();
-			CharSequence sequence = trimLB(content);
-			if (KEY_SCH_CONTENT.equals(current.getScheme()))
-				os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(current)));
-			else if (KEY_SCH_FILE.equals(current.getScheme()))
-				os = new BufferedOutputStream(new FileOutputStream(current.getPath()));
-			sequence = setLB(sequence, lineBreak);
-			String s = sequence.toString() + new SimpleDateFormat(KEY_SDF_LOG, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
-			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s).array())));
-			len = is.available();
-			lenTotal = 0;
-			b = new byte[BUF_SIZE];
-			while ((length = is.read(b)) != -1) {
-				os.write(b, 0, length);
-				lenTotal += length;
-			}
-			os.flush();
-			if (lenTotal != len) throw new IOException();
-			is.close();
-			os.close();
-			if (KEY_SCH_CONTENT.equals(current.getScheme())) try {
-				getContentResolver().takePersistableUriPermission(current, TAKE_FLAGS);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			Toast.makeText(this, R.string.err_write_file, Toast.LENGTH_SHORT).show();
-		} finally {
-			if (is != null) try {
-				is.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			if (os != null) try {
-				os.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
+//	//.LOG时间戳
+//	private void fileLog() {
+//		InputStream is = null;
+//		OutputStream os = null;
+//		try {   //以当前状态读源文件并追加时间戳保存，无需检测CRLF/编码等
+//			if (KEY_SCH_CONTENT.equals(current.getScheme()))
+//				is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(current)));
+//			else if (KEY_SCH_FILE.equals(current.getScheme()))
+//				is = new BufferedInputStream(new FileInputStream(current.getPath()));
+//			else throw new FileNotFoundException();
+//			os = new ByteArrayOutputStream(BUF_SIZE);
+//			int len = is.available();
+//			int length, lenTotal = 0;
+//			byte[] b = new byte[BUF_SIZE];
+//			while ((length = is.read(b)) != -1) {
+//				os.write(b, 0, length);
+//				lenTotal += length;
+//			}
+//			os.flush();
+//			if (lenTotal != len) throw new IOException();
+//			b = ((ByteArrayOutputStream) os).toByteArray();
+//			is.close();
+//			os.close();
+//			String content = Charset.forName(encoding).decode(ByteBuffer.wrap(b)).toString();
+//			CharSequence sequence = trimLB(content);
+//			if (KEY_SCH_CONTENT.equals(current.getScheme()))
+//				os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(current)));
+//			else if (KEY_SCH_FILE.equals(current.getScheme()))
+//				os = new BufferedOutputStream(new FileOutputStream(current.getPath()));
+//			sequence = setLB(sequence, lineBreak);
+//			String s = sequence.toString() + new SimpleDateFormat(KEY_SDF_LOG, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
+//			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s).array())));
+//			len = is.available();
+//			lenTotal = 0;
+//			b = new byte[BUF_SIZE];
+//			while ((length = is.read(b)) != -1) {
+//				os.write(b, 0, length);
+//				lenTotal += length;
+//			}
+//			os.flush();
+//			if (lenTotal != len) throw new IOException();
+//			is.close();
+//			os.close();
+//			if (KEY_SCH_CONTENT.equals(current.getScheme())) try {
+//				getContentResolver().takePersistableUriPermission(current, TAKE_FLAGS);
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			Toast.makeText(this, R.string.err_write_file, Toast.LENGTH_SHORT).show();
+//		} finally {
+//			if (is != null) try {
+//				is.close();
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//			if (os != null) try {
+//				os.close();
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//		}
+//	}
 
 	//保存文件后继续挂起的操作
 	private void processOperation(int operation, Intent intent) {
@@ -1267,8 +1257,8 @@ public class MainActivity extends AppCompatActivity {
 				openRecent();
 				break;
 			case OPE_CLOSE:
-				if (current != null && editor.isLog())
-					fileLog();
+//				if (current != null && editor.isLog())
+//					fileLog();
 				setRecent(current);
 				super.onBackPressed();
 				break;

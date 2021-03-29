@@ -15,7 +15,10 @@ import android.view.KeyEvent;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatEditText;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Objects;
 
 import static android.content.Context.CLIPBOARD_SERVICE;
@@ -24,8 +27,10 @@ public class EditorView extends AppCompatEditText {
 
 	//常量
 	private static final String
-			KEY_LOG = ".LOG\n\n",
-			LINE_BREAK_LF = "\n",
+			KEY_LOG = ".LOG",
+//			KEY_SDF_LOG = "\nhh:mm yyyy/M/d\n",
+			KEY_SDF_TS = "hh:mm yyyy/M/d",
+//			LINE_BREAK_LF = "\n",
 			STAT_SPLIT = "([.\\\\ ;,:<>'\"/?!\t{}()\\[\\]|])+";
 	EditorCallback editorCallback = null;
 	private final LinkedList<EditHistory> histories;
@@ -199,7 +204,7 @@ public class EditorView extends AppCompatEditText {
 					getEditableText().replace(Math.min(start, end), Math.max(start, end), getResources().getString(R.string.char_tab));
 					return true;
 				case KeyEvent.KEYCODE_F5: //时间日期
-					editorCallback.timestamp();
+					insertTimestamp();
 					return true;
 				case KeyEvent.KEYCODE_F3: //查找下一个
 					find();
@@ -357,18 +362,29 @@ public class EditorView extends AppCompatEditText {
 		cleanState = null;
 	}
 
+	//时间戳
+	void insertTimestamp() {
+		getEditableText().replace(getSelectionStart(), getSelectionEnd(), getTimestamp());
+	}
+
+	private String getTimestamp() {
+		return new SimpleDateFormat(KEY_SDF_TS, Locale.ENGLISH).format(new Date(System.currentTimeMillis()));
+	}
+
 	void loadContent(final CharSequence content) {
 		resetHistory();
 		historyOperating = true;
 		setText(content);
 		historyOperating = false;
+		if (Objects.requireNonNull(getText()).toString().startsWith(KEY_LOG))
+			append(new StringBuilder(MainActivity.LINE_BREAK.LF.s).append(getTimestamp()).append(MainActivity.LINE_BREAK.LF.s));
 		setSelection(0);
 		requestFocus();
 	}
 
-	boolean isLog() {
-		return Objects.requireNonNull(getText()).toString().startsWith(KEY_LOG) && (cleanState == null || cleanState.p >= 0);
-	}
+//	boolean isLog() {
+//		return Objects.requireNonNull(getText()).toString().startsWith(KEY_LOG) && (cleanState == null || cleanState.p >= 0);
+//	}
 
 	int[] statistics() {
 		int[] s = new int[3];
@@ -379,7 +395,7 @@ public class EditorView extends AppCompatEditText {
 			s[1] = s[0] > 0 ? str.split(STAT_SPLIT).length : 0;
 			s[2] = 1;
 			int i = 0, k;
-			while ((k = str.indexOf(LINE_BREAK_LF, i)) >= 0) {
+			while ((k = str.indexOf(MainActivity.LINE_BREAK.LF.s, i)) >= 0) {
 				s[2]++;
 				i = k + 1;
 			}
@@ -418,9 +434,6 @@ public class EditorView extends AppCompatEditText {
 
 		//退出
 		void quit();
-
-		//时间戳
-		void timestamp();
 
 		//查找替换
 		void find(boolean replace);
