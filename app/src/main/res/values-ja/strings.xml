@@ -41,7 +41,7 @@
     <string name="statistics_char">\n文字数\n\n</string>
     <string name="statistics_word">\n\n単語数\n\n</string>
     <string name="statistics_line">\n\n行数\n\n</string>
-    <string name="market">評価する </string>
+    <string name="market">評価する</string>
     <string name="about">
         Hyperpadは、メモ帳の主な機能を簡単に実装するアプリです。アプリを開き、何かを書いて保存ーーそれで全部です。\n
         \n

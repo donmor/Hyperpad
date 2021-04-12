@@ -1,12 +1,14 @@
 package top.donmor.hyperpad;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -53,6 +55,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.documentfile.provider.DocumentFile;
 
 import com.google.android.material.appbar.AppBarLayout;
@@ -134,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
 			SAF_OPEN = 42,
 			SAF_SAVE = 43,
 			TAKE_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
-	private static final String[] KEY_LEGACY_PERMISSIONS = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
 	private Menu optMenu;
 
 	enum LINE_BREAK {
@@ -958,7 +960,7 @@ public class MainActivity extends AppCompatActivity {
 				is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(uri)));
 				filename = Objects.requireNonNull(DocumentFile.fromSingleUri(this, uri)).getName();
 			} else if (KEY_SCH_FILE.equals(uri.getScheme())) {
-				ActivityCompat.requestPermissions(this, KEY_LEGACY_PERMISSIONS, 101);
+				checkPermission();
 				is = new BufferedInputStream(new FileInputStream(uri.getPath()));
 				filename = uri.getLastPathSegment();
 			} else throw new FileNotFoundException();
@@ -1238,6 +1240,13 @@ public class MainActivity extends AppCompatActivity {
 			b = c;
 		}
 		return b;
+	}
+
+	@TargetApi(23)
+	private void checkPermission() {
+		if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+			ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+		}
 	}
 
 	//文本转HTML
