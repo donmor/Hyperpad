@@ -61,7 +61,7 @@ public class EditorView extends AppCompatEditText {
 		return !find(finding);
 	}
 
-	boolean find(String key) {
+	private boolean find(String key) {
 		if (key.length() == 0) {
 			requestFocus();
 			return false;
@@ -84,7 +84,7 @@ public class EditorView extends AppCompatEditText {
 		return !findUp(finding);
 	}
 
-	boolean findUp(String key) {
+	private boolean findUp(String key) {
 		if (key.length() == 0) {
 			requestFocus();
 			return false;

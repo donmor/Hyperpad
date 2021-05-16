@@ -5,7 +5,6 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -31,7 +30,6 @@ import android.text.style.StyleSpan;
 import android.text.util.Linkify;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -185,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
 		wrap = preferences.getBoolean(KEY_CFG_WRAP, true);
 		mono = preferences.getBoolean(KEY_CFG_MONO, false);
 		fontSize = preferences.getInt(KEY_CFG_SIZE, 18);
-		String[] rSet = Objects.requireNonNull(preferences.getStringSet(KEY_CFG_RECENT, new HashSet<String>())).toArray(new String[0]);
+		String[] rSet = Objects.requireNonNull(preferences.getStringSet(KEY_CFG_RECENT, new HashSet<>())).toArray(new String[0]);
 		recentUri = new Uri[rSet.length];
 		for (int i = 0; i < rSet.length; i++) recentUri[i] = Uri.parse(rSet[i]);
 		//初始化顶栏
@@ -435,14 +433,11 @@ public class MainActivity extends AppCompatActivity {
 						.setTitle(R.string.action_about)
 						.setMessage(spannableString)
 						.setPositiveButton(android.R.string.ok, null)
-						.setNeutralButton(R.string.market, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								try {
-									startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(KEY_URI_RATE + getPackageName())));
-								} catch (Exception e) {
-									e.printStackTrace();
-								}
+						.setNeutralButton(R.string.market, (dialog, which) -> {
+							try {
+								startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(KEY_URI_RATE + getPackageName())));
+							} catch (Exception e) {
+								e.printStackTrace();
 							}
 						})
 						.show();
@@ -489,21 +484,15 @@ public class MainActivity extends AppCompatActivity {
 				if (dialog != null) dialog.dismiss();
 				dialog = new AlertDialog.Builder(this)
 						.setTitle(R.string.action_line_break)
-						.setSingleChoiceItems(R.array.line_breaks, v, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								if (which == v) return;
-								lineBreak = which == 1 ? LINE_BREAK.CRLF : which == 2 ? LINE_BREAK.CR : LINE_BREAK.LF;
-								dialog.dismiss();
-								updateStatusBar();
-							}
+						.setSingleChoiceItems(R.array.line_breaks, v, (dialog, which) -> {
+							if (which == v) return;
+							lineBreak = which == 1 ? LINE_BREAK.CRLF : which == 2 ? LINE_BREAK.CR : LINE_BREAK.LF;
+							dialog.dismiss();
+							updateStatusBar();
 						})
-						.setOnDismissListener(new DialogInterface.OnDismissListener() {
-							@Override
-							public void onDismiss(DialogInterface dialog) {
-								editor.requestFocus();
-								MainActivity.this.dialog = null;
-							}
+						.setOnDismissListener(dialog -> {
+							editor.requestFocus();
+							MainActivity.this.dialog = null;
 						})
 						.show();
 				break;
@@ -517,21 +506,15 @@ public class MainActivity extends AppCompatActivity {
 				if (dialog != null) dialog.dismiss();
 				dialog = new AlertDialog.Builder(this)
 						.setTitle(R.string.action_encoding)
-						.setSingleChoiceItems(charsets, v2, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								if (which == v2) return;
-								encoding = charsets[which];
-								dialog.dismiss();
-								updateStatusBar();
-							}
+						.setSingleChoiceItems(charsets, v2, (dialog, which) -> {
+							if (which == v2) return;
+							encoding = charsets[which];
+							dialog.dismiss();
+							updateStatusBar();
 						})
-						.setOnDismissListener(new DialogInterface.OnDismissListener() {
-							@Override
-							public void onDismiss(DialogInterface dialog) {
-								editor.requestFocus();
-								MainActivity.this.dialog = null;
-							}
+						.setOnDismissListener(dialog -> {
+							editor.requestFocus();
+							MainActivity.this.dialog = null;
 						})
 						.show();
 				break;
@@ -562,12 +545,7 @@ public class MainActivity extends AppCompatActivity {
 				picker.setMinValue(8);
 				picker.setMaxValue(36);
 				picker.setValue(fontSize);
-				picker.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
-					@Override
-					public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-						editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, picker.getValue());
-					}
-				});
+				picker.setOnValueChangedListener((picker1, oldVal, newVal) -> editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, picker1.getValue()));
 				FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
 				params.gravity = Gravity.CENTER;
 				FrameLayout layout1 = new FrameLayout(this);
@@ -577,25 +555,14 @@ public class MainActivity extends AppCompatActivity {
 				dialog = new AlertDialog.Builder(this)
 						.setTitle(R.string.action_font_size)
 						.setView(layout1)
-						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								fontSize = picker.getValue();
-								preferences.edit().putInt(KEY_CFG_SIZE, fontSize).apply();
-							}
+						.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+							fontSize = picker.getValue();
+							preferences.edit().putInt(KEY_CFG_SIZE, fontSize).apply();
 						})
-						.setOnCancelListener(new DialogInterface.OnCancelListener() {
-							@Override
-							public void onCancel(DialogInterface dialog) {
-								editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-							}
-						})
-						.setOnDismissListener(new DialogInterface.OnDismissListener() {
-							@Override
-							public void onDismiss(DialogInterface dialog) {
-								editor.requestFocus();
-								MainActivity.this.dialog = null;
-							}
+						.setOnCancelListener(dialog -> editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize))
+						.setOnDismissListener(dialog -> {
+							editor.requestFocus();
+							MainActivity.this.dialog = null;
 						})
 						.show();
 				break;
@@ -620,12 +587,9 @@ public class MainActivity extends AppCompatActivity {
 						.setTitle(R.string.action_statistics)
 						.setMessage(builder)
 						.setPositiveButton(android.R.string.ok, null)
-						.setOnDismissListener(new DialogInterface.OnDismissListener() {
-							@Override
-							public void onDismiss(DialogInterface dialog) {
-								editor.requestFocus();
-								MainActivity.this.dialog = null;
-							}
+						.setOnDismissListener(dialog -> {
+							editor.requestFocus();
+							MainActivity.this.dialog = null;
 						})
 						.show();
 				break;
@@ -655,62 +619,34 @@ public class MainActivity extends AppCompatActivity {
 					editor.setFinding(s.toString());
 				}
 			});
-			find.setOnKeyListener(new View.OnKeyListener() {
-				@Override
-				public boolean onKey(View v, int keyCode, KeyEvent event) {
-					return editor.onKey(keyCode, event, false);
-				}
+			find.setOnKeyListener((v, keyCode, event) -> editor.onKey(keyCode, event, false));
+			findViewById(R.id.find_replace_sw).setOnClickListener(v -> {
+				findViewById(R.id.find_replace_panel).setVisibility(View.VISIBLE);
+				v.setVisibility(View.GONE);
 			});
-			findViewById(R.id.find_replace_sw).setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					findViewById(R.id.find_replace_panel).setVisibility(View.VISIBLE);
-					v.setVisibility(View.GONE);
-				}
+			findViewById(R.id.find_close).setOnClickListener(v -> {
+				holder.removeAllViews();
+				findReplace = null;
 			});
-			findViewById(R.id.find_close).setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					holder.removeAllViews();
-					findReplace = null;
-				}
+			findViewById(R.id.find_down).setOnClickListener(v -> {
+				if (editor.notFound())
+					Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
 			});
-			findViewById(R.id.find_down).setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					if (editor.notFound())
-						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-				}
-			});
-			findViewById(R.id.find_up).setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					if (editor.notFoundUp())
-						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-				}
+			findViewById(R.id.find_up).setOnClickListener(v -> {
+				if (editor.notFoundUp())
+					Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
 			});
 			final CheckBox caseS = findViewById(R.id.find_case_sensitive);
 			caseS.setChecked(editor.isFindCaseSensitive());
-			caseS.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					editor.setFindCaseSensitive(caseS.isChecked());
-				}
+			caseS.setOnClickListener(v -> editor.setFindCaseSensitive(caseS.isChecked()));
+			findViewById(R.id.find_replace).setOnClickListener(v -> {
+				if (!editor.replace(find.getText().toString(), replace.getText().toString()))
+					Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
+				editor.requestFocus();
 			});
-			findViewById(R.id.find_replace).setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					if (!editor.replace(find.getText().toString(), replace.getText().toString()))
-						Toast.makeText(MainActivity.this, R.string.find_not_found, Toast.LENGTH_SHORT).show();
-					editor.requestFocus();
-				}
-			});
-			findViewById(R.id.find_replace_all).setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					Toast.makeText(MainActivity.this, getString(R.string.find_replaced).replace(KEY_FIND_TOAST, String.valueOf(editor.replaceAll(find.getText().toString(), replace.getText().toString()))), Toast.LENGTH_SHORT).show();
-					editor.requestFocus();
-				}
+			findViewById(R.id.find_replace_all).setOnClickListener(v -> {
+				Toast.makeText(MainActivity.this, getString(R.string.find_replaced).replace(KEY_FIND_TOAST, String.valueOf(editor.replaceAll(find.getText().toString(), replace.getText().toString()))), Toast.LENGTH_SHORT).show();
+				editor.requestFocus();
 			});
 		}
 		if (r) findViewById(R.id.find_replace_sw).callOnClick();
@@ -729,35 +665,26 @@ public class MainActivity extends AppCompatActivity {
 		dialog = new AlertDialog.Builder(this)
 				.setTitle(R.string.action_goto)
 				.setView(layout)
-				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						if (line.length() == 0) return;
-						int x = Integer.parseInt(line.getText().toString());
-						if (x <= 0) return;
-						String content = editor.getEditableText().toString();
-						int p = 0;
-						for (int i = 0; i < x - 1; i++) {
-							int v = content.indexOf(LINE_BREAK.LF.s, p);
-							if (v >= 0) p = v + 1;
-						}
-						editor.setSelection(p);
+				.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+					if (line.length() == 0) return;
+					int x = Integer.parseInt(line.getText().toString());
+					if (x <= 0) return;
+					String content = editor.getEditableText().toString();
+					int p = 0;
+					for (int i = 0; i < x - 1; i++) {
+						int v = content.indexOf(LINE_BREAK.LF.s, p);
+						if (v >= 0) p = v + 1;
 					}
+					editor.setSelection(p);
 				})
-				.setOnDismissListener(new DialogInterface.OnDismissListener() {
-					@Override
-					public void onDismiss(DialogInterface dialog) {
-						editor.requestFocus();
-						MainActivity.this.dialog = null;
-					}
+				.setOnDismissListener(dialog -> {
+					editor.requestFocus();
+					MainActivity.this.dialog = null;
 				})
 				.create();
-		line.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-			@Override
-			public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-				dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-				return false;
-			}
+		line.setOnEditorActionListener((v, actionId, event) -> {
+			dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+			return false;
 		});
 		dialog.show();
 	}
@@ -783,7 +710,7 @@ public class MainActivity extends AppCompatActivity {
 
 	private void loadStatusBar() {
 		if (appbar.findViewById(R.id.status_bar_widget) == null) {
-			statBar = LayoutInflater.from(this).inflate(R.layout.status_bar, (ViewGroup) findViewById(R.id.status_bar_holder));
+			statBar = LayoutInflater.from(this).inflate(R.layout.status_bar, findViewById(R.id.status_bar_holder));
 			updateStatusBar();
 		}
 	}
@@ -903,26 +830,15 @@ public class MainActivity extends AppCompatActivity {
 		dialog = new AlertDialog.Builder(this)
 				.setTitle(android.R.string.dialog_alert_title)
 				.setMessage(R.string.file_save_confirm)
-				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						if (current == null) SAFSave(operation, intent);
-						else fileWrite(operation, intent);
-					}
+				.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+					if (current == null) SAFSave(operation, intent);
+					else fileWrite(operation, intent);
 				})
 				.setNegativeButton(android.R.string.cancel, null)
-				.setNeutralButton(R.string.do_not_save, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						processOperation(operation, intent);
-					}
-				})
-				.setOnDismissListener(new DialogInterface.OnDismissListener() {
-					@Override
-					public void onDismiss(DialogInterface dialog) {
-						editor.requestFocus();
-						MainActivity.this.dialog = null;
-					}
+				.setNeutralButton(R.string.do_not_save, (dialog, which) -> processOperation(operation, intent))
+				.setOnDismissListener(dialog -> {
+					editor.requestFocus();
+					MainActivity.this.dialog = null;
 				})
 				.show();
 	}
@@ -1024,18 +940,10 @@ public class MainActivity extends AppCompatActivity {
 			if (dialog != null) dialog.dismiss();
 			dialog = new AlertDialog.Builder(this)
 					.setTitle(R.string.action_recent)
-					.setItems(items, new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							openDoc(recentUri[which]);
-						}
-					})
-					.setOnDismissListener(new DialogInterface.OnDismissListener() {
-						@Override
-						public void onDismiss(DialogInterface dialog) {
-							editor.requestFocus();
-							MainActivity.this.dialog = null;
-						}
+					.setItems(items, (dialog, which) -> openDoc(recentUri[which]))
+					.setOnDismissListener(dialog -> {
+						editor.requestFocus();
+						MainActivity.this.dialog = null;
 					})
 					.show();
 		} catch (UnsupportedEncodingException e) {
