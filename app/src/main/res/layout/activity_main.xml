@@ -1,52 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context=".MainActivity">
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	tools:context=".MainActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="0"
-        tools:ignore="InefficientWeight">
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_weight="0"
+		tools:ignore="InefficientWeight">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize" />
-        <LinearLayout
-            android:id="@+id/find_replace_holder"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:animateLayoutChanges="true"
-            android:orientation="vertical" />
-        <LinearLayout
-            android:id="@+id/status_bar_holder"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:animateLayoutChanges="true"
-            android:orientation="vertical" />
+		<androidx.appcompat.widget.Toolbar
+			android:id="@+id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="?attr/actionBarSize" />
 
-    </com.google.android.material.appbar.AppBarLayout>
+		<LinearLayout
+			android:id="@+id/find_replace_holder"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:animateLayoutChanges="true"
+			android:orientation="vertical" />
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:scrollbars="vertical">
+		<LinearLayout
+			android:id="@+id/status_bar_holder"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:animateLayoutChanges="true"
+			android:orientation="vertical" />
 
-        <top.donmor.hyperpad.EditorView
-            android:id="@+id/editor_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            android:gravity="top"
-            android:imeOptions="flagNoExtractUi|flagNoFullscreen"
-            android:inputType="textMultiLine"
-            android:padding="4dp" />
-    </ScrollView>
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<ScrollView
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:fillViewport="true"
+		android:scrollbars="vertical">
+
+		<top.donmor.hyperpad.EditorView
+			android:id="@+id/editor_view"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:background="@android:color/transparent"
+			android:gravity="top"
+			android:imeOptions="flagNoExtractUi|flagNoFullscreen"
+			android:inputType="textMultiLine"
+			android:padding="4dp" />
+	</ScrollView>
 
 </LinearLayout>

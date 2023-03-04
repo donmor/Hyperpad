@@ -1,51 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="top.donmor.hyperpad">
+	xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
-    <application
-        android:allowBackup="true"
-        android:fullBackupContent="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-        <activity
-            android:name=".MainActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
-            android:exported="true"
-            android:hardwareAccelerated="true"
-            android:label="@string/app_name"
-            android:launchMode="singleInstance"
-            android:theme="@style/AppTheme.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
+	<uses-permission
+		android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+		tools:ignore="ScopedStorage" />
+	<application
+		android:allowBackup="true"
+		android:fullBackupContent="true"
+		android:icon="@mipmap/ic_launcher"
+		android:label="@string/app_name"
+		android:largeHeap="true"
+		android:roundIcon="@mipmap/ic_launcher_round"
+		android:supportsRtl="true"
+		android:theme="@style/AppTheme"
+		android:dataExtractionRules="@xml/data_extraction_rules"
+		tools:targetApi="s">
+		<activity
+			android:name=".MainActivity"
+			android:configChanges="keyboardHidden|orientation|screenSize"
+			android:exported="true"
+			android:hardwareAccelerated="true"
+			android:launchMode="singleInstance"
+			android:theme="@style/AppTheme.NoActionBar">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
 
-                <data android:scheme="content" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
+				<data android:scheme="content" />
+				<data android:mimeType="*/*" />
+			</intent-filter>
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
 
-                <data android:scheme="file" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
+				<data android:scheme="file" />
+				<data android:mimeType="*/*" />
+			</intent-filter>
+			<intent-filter>
+				<action android:name="android.intent.action.SEND" />
+				<category android:name="android.intent.category.DEFAULT" />
 
-                <data android:mimeType="text/plain" />
-            </intent-filter>
-        </activity>
-    </application>
+				<data android:mimeType="text/plain" />
+			</intent-filter>
+		</activity>
+	</application>
 </manifest>
