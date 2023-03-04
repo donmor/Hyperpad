@@ -451,7 +451,7 @@ public class MainActivity extends AppCompatActivity {
 				SpannableString spannableString = new SpannableString(getString(R.string.about));
 				Linkify.addLinks(spannableString, Linkify.ALL);
 				android.app.AlertDialog aboutDialog = new android.app.AlertDialog.Builder(this)
-						.setTitle(R.string.action_about)
+						.setTitle(getString(R.string.about_title, BuildConfig.VERSION_NAME))
 						.setMessage(spannableString)
 						.setPositiveButton(android.R.string.ok, null)
 						.setNeutralButton(R.string.market, (dialog, which) -> {

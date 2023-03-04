@@ -53,6 +53,7 @@
         \n
         For more details about this app, please visit the project page ( https://github.com/donmor/Hyperpad/ ) or my homepage ( https://donmor.top/ ).
     </string>
+	<string name="about_title" translatable="false">Hyperpad - %s</string>
 	<!--MISC-->
 	<string name="char_tab" translatable="false">&#160;&#160;&#160;&#160;</string>
 </resources>
