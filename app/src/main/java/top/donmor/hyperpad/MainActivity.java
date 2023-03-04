@@ -2,7 +2,6 @@ package top.donmor.hyperpad;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +12,7 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
@@ -47,6 +47,8 @@ import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -60,12 +62,8 @@ import com.google.android.material.appbar.AppBarLayout;
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -75,6 +73,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.NonReadableChannelException;
+import java.nio.channels.NonWritableChannelException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -89,6 +91,8 @@ public class MainActivity extends AppCompatActivity {
 		AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
 	}
 
+	private ActivityResultLauncher<Intent> getChooserOpen, getChooserSave;
+
 	//常量
 	private static final String
 			CHARSET_DEFAULT = StandardCharsets.UTF_8.name(),
@@ -98,6 +102,8 @@ public class MainActivity extends AppCompatActivity {
 			KEY_CFG_MONO = "font_mono",
 			KEY_CFG_RECENT = "recent",
 			KEY_CFG_SIZE = "font_size",
+			KEY_FD_R = "r",
+			KEY_FD_W = "w",
 			KEY_FIND_TOAST = "$x",
 			KEY_SIS = "sis",
 			KEY_SIS_CHANGE = "change",
@@ -124,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
 			TYPE_TEXT = "text/plain",
 			TYPE_ALL = "*/*";
 	private static final int
-			BUF_SIZE = 8192,
+//			BUF_SIZE = 8192,
 			OPE_EDIT = 0,
 			OPE_NEW = 1,
 			OPE_OPEN = 2,
@@ -132,9 +138,9 @@ public class MainActivity extends AppCompatActivity {
 			OPE_CLOSE = 4,
 			OPE_VIEW = 5,
 			OPE_RECEIVE = 6,
-			SAF_OPEN = 42,
-			SAF_SAVE = 43,
-			TAKE_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+	//			SAF_OPEN = 42,
+//			SAF_SAVE = 43,
+	TAKE_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
 	private Menu optMenu;
 
 	enum LINE_BREAK {
@@ -192,6 +198,21 @@ public class MainActivity extends AppCompatActivity {
 		setSupportActionBar(toolbar);
 		this.setTitle(R.string.app_name);
 		toolbar.setSubtitle(currentFilename);
+		//SAF回调
+		getChooserOpen = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+			if (result.getData() != null) {
+				final Uri uri = result.getData().getData();
+				if (uri != null)
+					openDoc(uri);
+			}
+		});
+		getChooserSave = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+			if (result.getData() != null) {
+				final Uri uri = result.getData().getData();
+				if (uri != null)
+					fileWrite(this.operation, uri, this.operationData);
+			}
+		});
 		//沉浸式双栏
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 			Window window = getWindow();
@@ -689,23 +710,23 @@ public class MainActivity extends AppCompatActivity {
 		dialog.show();
 	}
 
-	//SAF执行结果
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
-		super.onActivityResult(requestCode, resultCode, resultData);
-		if (resultCode == Activity.RESULT_OK && resultData != null) {
-			final Uri uri = resultData.getData();
-			if (uri != null)
-				switch (requestCode) {
-					case SAF_OPEN:
-						openDoc(uri);
-						break;
-					case SAF_SAVE:
-						fileWrite(this.operation, uri, this.operationData);
-						break;
-				}
-		}
-	}
+//	//SAF执行结果
+//	@Override
+//	public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+//		super.onActivityResult(requestCode, resultCode, resultData);
+//		if (resultCode == Activity.RESULT_OK && resultData != null) {
+//			final Uri uri = resultData.getData();
+//			if (uri != null)
+//				switch (requestCode) {
+//					case SAF_OPEN:
+//						openDoc(uri);
+//						break;
+//					case SAF_SAVE:
+//						fileWrite(this.operation, uri, this.operationData);
+//						break;
+//				}
+//		}
+//	}
 
 
 	private void loadStatusBar() {
@@ -868,33 +889,35 @@ public class MainActivity extends AppCompatActivity {
 
 	//载入文件
 	private void openDoc(Uri uri) {
-		BufferedInputStream is = null;
-		ByteArrayOutputStream os = null;
-		try {
+//		BufferedInputStream is = null;
+//		ByteArrayOutputStream os = null;
+		try (ParcelFileDescriptor ifd = Objects.requireNonNull(getContentResolver().openFileDescriptor(uri, KEY_FD_R));
+				FileInputStream is = new FileInputStream(ifd.getFileDescriptor());
+				FileChannel ic = is.getChannel()) {
 			String filename;
 			if (KEY_SCH_CONTENT.equals(uri.getScheme())) {  //判断使用的协议
-				is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(uri)));
+//				is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(uri)));
 				filename = Objects.requireNonNull(DocumentFile.fromSingleUri(this, uri)).getName();
 			} else if (KEY_SCH_FILE.equals(uri.getScheme())) {
 				checkPermission();
-				is = new BufferedInputStream(new FileInputStream(uri.getPath()));
+//				is = new BufferedInputStream(new FileInputStream(uri.getPath()));
 				filename = uri.getLastPathSegment();
 			} else throw new FileNotFoundException();
-			os = new ByteArrayOutputStream(BUF_SIZE);   //读全部数据
-			int len = is.available();
-			int length, lenTotal = 0;
-			byte[] b = new byte[BUF_SIZE];
-			while ((length = is.read(b)) != -1) {
-				os.write(b, 0, length);
-				lenTotal += length;
-			}
-			os.flush();
-			if (lenTotal != len) throw new IOException();
-			b = os.toByteArray();
-			is.close();
-			os.close();
+//			os = new ByteArrayOutputStream(BUF_SIZE);   //读全部数据
+//			int len = is.available();
+//			int length, lenTotal = 0;
+//			byte[] b = new byte[BUF_SIZE];
+//			while ((length = is.read(b)) != -1) {
+//				os.write(b, 0, length);
+//				lenTotal += length;
+//			}
+//			os.flush();
+//			if (lenTotal != len) throw new IOException();
+//			b = os.toByteArray();
+//			is.close();
+//			os.close();
 			CharsetDetector detector = new CharsetDetector();   //检测编码
-			CharsetMatch[] matches = detector.setText(b).detectAll();
+			CharsetMatch[] matches = detector.setText(fc2ba(ic)).detectAll();
 			if (matches == null || matches.length == 0) throw new IOException();
 			CharsetMatch match = matches[0];
 			setRecent(current);   //处置上一文件并初始化新文件
@@ -914,17 +937,17 @@ public class MainActivity extends AppCompatActivity {
 		} catch (Exception e) {
 			e.printStackTrace();
 			Toast.makeText(this, R.string.err_load_file, Toast.LENGTH_SHORT).show();
-		} finally {
-			if (is != null) try {
-				is.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			if (os != null) try {
-				os.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+//		} finally {
+//			if (is != null) try {
+//				is.close();
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//			if (os != null) try {
+//				os.close();
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
 		}
 	}
 
@@ -952,18 +975,21 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void SAFOpen() {
-		startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_OPEN);
+//		startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_OPEN);
+		getChooserOpen.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL));
 	}
 
 	private void SAFSave() {
 		this.operation = OPE_EDIT;
-		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename), SAF_SAVE);
+//		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename), SAF_SAVE);
+		getChooserSave.launch(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename));
 	}
 
 	private void SAFSave(int operation, Intent data) {
 		this.operation = operation;
 		this.operationData = data;
-		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename), SAF_SAVE);
+//		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename), SAF_SAVE);
+		getChooserSave.launch(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename));
 	}
 
 	private void fileWrite() {
@@ -977,32 +1003,35 @@ public class MainActivity extends AppCompatActivity {
 
 	//写入
 	private void fileWrite(int operation, Uri uri, Intent opData) {
-		BufferedInputStream is;
-		BufferedOutputStream os = null;
-		try {
+//		BufferedInputStream is;
+//		BufferedOutputStream os = null;
+		try (ParcelFileDescriptor ofd = Objects.requireNonNull(getContentResolver().openFileDescriptor(uri, MainActivity.KEY_FD_W));
+				FileOutputStream os = new FileOutputStream(ofd.getFileDescriptor());
+				FileChannel oc = os.getChannel()) {
 			String filename;
 			if (KEY_SCH_CONTENT.equals(uri.getScheme())) {  //判断协议
-				os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(uri)));
+//				os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(uri)));
 				filename = Objects.requireNonNull(DocumentFile.fromSingleUri(this, uri)).getName();
 			} else if (KEY_SCH_FILE.equals(uri.getScheme())) {
-				os = new BufferedOutputStream(new FileOutputStream(uri.getPath()));
+//				os = new BufferedOutputStream(new FileOutputStream(uri.getPath()));
 				filename = uri.getLastPathSegment();
 			} else throw new FileNotFoundException();
 			Editable e = editor.getText();
 			if (e == null) throw new IOException();
 			CharSequence s = setLB(e.toString(), lineBreak);    //处理文本并二进制化，写入
-			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s.toString()).array())));
-			int len = is.available();
-			int length, lenTotal = 0;
-			byte[] b = new byte[BUF_SIZE];
-			while ((length = is.read(b)) != -1) {
-				os.write(b, 0, length);
-				lenTotal += length;
-			}
-			os.flush();
-			if (lenTotal != len) throw new IOException();
-			is.close();
-			os.close();
+//			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s.toString()).array())));
+			ba2fc(removeZero(Charset.forName(encoding).encode(s.toString()).array()), oc);
+//			int len = is.available();
+//			int length, lenTotal = 0;
+//			byte[] b = new byte[BUF_SIZE];
+//			while ((length = is.read(b)) != -1) {
+//				os.write(b, 0, length);
+//				lenTotal += length;
+//			}
+//			os.flush();
+//			if (lenTotal != len) throw new IOException();
+//			is.close();
+//			os.close();
 			current = uri;
 			currentFilename = filename;
 			editor.clearModified();
@@ -1018,12 +1047,12 @@ public class MainActivity extends AppCompatActivity {
 		} catch (Exception e) {
 			e.printStackTrace();
 			Toast.makeText(this, R.string.err_write_file, Toast.LENGTH_SHORT).show();
-		} finally {
-			if (os != null) try {
-				os.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+//		} finally {
+//			if (os != null) try {
+//				os.close();
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
 		}
 	}
 
@@ -1118,9 +1147,14 @@ public class MainActivity extends AppCompatActivity {
 		Uri[] ux = new Uri[recentUri.length];
 		for (Uri u : recentUri) {
 			try {
-				if (KEY_SCH_CONTENT.equals(u.getScheme()))
-					getContentResolver().openInputStream(u);
-				else if (KEY_SCH_FILE.equals(u.getScheme()) && (u.getPath() == null || !new File(u.getPath()).canRead()))
+				if (KEY_SCH_CONTENT.equals(u.getScheme())) {
+					DocumentFile df = DocumentFile.fromSingleUri(this, u);
+					if (df != null && !df.canWrite()) {
+						throw new FileNotFoundException();
+					}
+//					InputStream is = getContentResolver().openInputStream(u);
+//					is.close();
+				} else if (KEY_SCH_FILE.equals(u.getScheme()) && (u.getPath() == null || !new File(u.getPath()).canRead()))
 					throw new FileNotFoundException();
 				if (!u.equals(uri)) ux[count++] = u;
 			} catch (Exception e) {
@@ -1137,6 +1171,19 @@ public class MainActivity extends AppCompatActivity {
 		String[] x = new String[recentUri.length];
 		for (int i = 0; i < recentUri.length; i++) x[i] = recentUri[i].toString();
 		preferences.edit().putStringSet(KEY_CFG_RECENT, new HashSet<>(Arrays.asList(x))).apply();
+	}
+
+	private static byte[] fc2ba(@NonNull FileChannel ic) throws IOException, NonReadableChannelException {
+		if (ic.size() > Integer.MAX_VALUE) throw new IOException();
+		ByteBuffer buffer = ByteBuffer.allocate((int) ic.size());
+		ic.read(buffer);
+		return buffer.array();
+	}
+
+	private static void ba2fc(byte[] bytes, @NonNull FileChannel oc) throws IOException, NonWritableChannelException {
+		oc.write(ByteBuffer.wrap(bytes));
+		oc.truncate(bytes.length);
+		oc.force(true);
 	}
 
 	//清除0x00

@@ -1,191 +1,191 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+	xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <item
-        android:id="@+id/action_file"
-        android:icon="@drawable/ic_folder_open"
-        android:orderInCategory="100"
-        android:title="@string/action_file"
-        app:showAsAction="ifRoom|withText">
-        <menu>
-            <item
-                android:id="@+id/action_new"
-                android:icon="@drawable/ic_new"
-                android:orderInCategory="100"
-                android:title="@string/action_new"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_open"
-                android:icon="@drawable/ic_folder"
-                android:orderInCategory="100"
-                android:title="@string/action_open"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_recent"
-                android:icon="@drawable/ic_recent"
-                android:orderInCategory="100"
-                android:title="@string/action_recent"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_save"
-                android:icon="@drawable/ic_save"
-                android:orderInCategory="100"
-                android:title="@string/action_save"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_save_as"
-                android:icon="@drawable/ic_save_as"
-                android:orderInCategory="100"
-                android:title="@string/action_save_as"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_share"
-                android:icon="@drawable/ic_share"
-                android:orderInCategory="100"
-                android:title="@string/action_share"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_print"
-                android:icon="@drawable/ic_print"
-                android:orderInCategory="100"
-                android:title="@string/action_print"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_about"
-                android:icon="@drawable/ic_about"
-                android:orderInCategory="100"
-                android:title="@string/action_about"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_close"
-                android:icon="@drawable/ic_close"
-                android:orderInCategory="100"
-                android:title="@string/action_close"
-                app:showAsAction="withText" />
-        </menu>
-    </item>
+	<item
+		android:id="@+id/action_file"
+		android:icon="@drawable/ic_folder_open"
+		android:orderInCategory="100"
+		android:title="@string/action_file"
+		app:showAsAction="ifRoom|withText">
+		<menu>
+			<item
+				android:id="@+id/action_new"
+				android:icon="@drawable/ic_new"
+				android:orderInCategory="100"
+				android:title="@string/action_new"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_open"
+				android:icon="@drawable/ic_folder"
+				android:orderInCategory="100"
+				android:title="@string/action_open"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_recent"
+				android:icon="@drawable/ic_recent"
+				android:orderInCategory="100"
+				android:title="@string/action_recent"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_save"
+				android:icon="@drawable/ic_save"
+				android:orderInCategory="100"
+				android:title="@string/action_save"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_save_as"
+				android:icon="@drawable/ic_save_as"
+				android:orderInCategory="100"
+				android:title="@string/action_save_as"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_share"
+				android:icon="@drawable/ic_share"
+				android:orderInCategory="100"
+				android:title="@string/action_share"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_print"
+				android:icon="@drawable/ic_print"
+				android:orderInCategory="100"
+				android:title="@string/action_print"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_about"
+				android:icon="@drawable/ic_about"
+				android:orderInCategory="100"
+				android:title="@string/action_about"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_close"
+				android:icon="@drawable/ic_close"
+				android:orderInCategory="100"
+				android:title="@string/action_close"
+				app:showAsAction="withText" />
+		</menu>
+	</item>
 
-    <item
-        android:id="@+id/action_edit"
-        android:icon="@drawable/ic_edit"
-        android:orderInCategory="100"
-        android:title="@string/action_edit"
-        app:showAsAction="ifRoom|withText">
-        <menu>
-            <item
-                android:id="@+id/action_undo"
-                android:icon="@drawable/ic_undo"
-                android:orderInCategory="100"
-                android:title="@string/action_undo"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_redo"
-                android:icon="@drawable/ic_redo"
-                android:orderInCategory="100"
-                android:title="@string/action_redo"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_cut"
-                android:icon="@drawable/ic_content_cut"
-                android:orderInCategory="100"
-                android:title="@android:string/cut"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_copy"
-                android:icon="@drawable/ic_content_copy"
-                android:orderInCategory="100"
-                android:title="@android:string/copy"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_paste"
-                android:icon="@drawable/ic_content_paste"
-                android:orderInCategory="100"
-                android:title="@android:string/paste"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_delete"
-                android:icon="@drawable/ic_backspace"
-                android:orderInCategory="100"
-                android:title="@string/action_delete"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_select_all"
-                android:icon="@drawable/ic_select_all"
-                android:orderInCategory="100"
-                android:title="@android:string/selectAll"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_timestamp"
-                android:icon="@drawable/ic_plus_time"
-                android:orderInCategory="100"
-                android:title="@string/action_timestamp"
-                app:showAsAction="withText" />
-        </menu>
-    </item>
-    <item
-        android:id="@+id/action_view"
-        android:icon="@drawable/ic_view"
-        android:orderInCategory="100"
-        android:title="@string/action_view"
-        app:showAsAction="ifRoom|withText">
-        <menu>
-            <item
-                android:id="@+id/action_find"
-                android:icon="@drawable/ic_search"
-                android:orderInCategory="100"
-                android:title="@string/action_find"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_goto"
-                android:icon="@drawable/ic_arrow_forward"
-                android:orderInCategory="100"
-                android:title="@string/action_goto"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_line_break"
-                android:icon="@drawable/ic_keyboard_return"
-                android:orderInCategory="100"
-                android:title="@string/action_line_break"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_encoding"
-                android:icon="@drawable/ic_language"
-                android:orderInCategory="100"
-                android:title="@string/action_encoding"
-                app:showAsAction="withText" />
-            <group android:checkableBehavior="all">
-                <item
-                    android:id="@+id/action_status_bar"
-                    android:icon="@drawable/ic_status_bar"
-                    android:orderInCategory="100"
-                    android:title="@string/action_status_bar"
-                    app:showAsAction="withText" />
-                <item
-                    android:id="@+id/action_wrap_text"
-                    android:icon="@drawable/ic_wrap_text"
-                    android:orderInCategory="100"
-                    android:title="@string/action_warp_text"
-                    app:showAsAction="withText" />
-                <item
-                    android:id="@+id/action_font_monospace"
-                    android:icon="@drawable/ic_format_monospace"
-                    android:orderInCategory="100"
-                    android:title="@string/action_font_monospace"
-                    app:showAsAction="withText" />
-            </group>
-            <item
-                android:id="@+id/action_font_size"
-                android:icon="@drawable/ic_format_size"
-                android:orderInCategory="100"
-                android:title="@string/action_font_size"
-                app:showAsAction="withText" />
-            <item
-                android:id="@+id/action_statistics"
-                android:icon="@drawable/ic_assessment"
-                android:orderInCategory="100"
-                android:title="@string/action_statistics"
-                app:showAsAction="withText" />
-        </menu>
-    </item>
+	<item
+		android:id="@+id/action_edit"
+		android:icon="@drawable/ic_edit"
+		android:orderInCategory="100"
+		android:title="@string/action_edit"
+		app:showAsAction="ifRoom|withText">
+		<menu>
+			<item
+				android:id="@+id/action_undo"
+				android:icon="@drawable/ic_undo"
+				android:orderInCategory="100"
+				android:title="@string/action_undo"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_redo"
+				android:icon="@drawable/ic_redo"
+				android:orderInCategory="100"
+				android:title="@string/action_redo"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_cut"
+				android:icon="@drawable/ic_content_cut"
+				android:orderInCategory="100"
+				android:title="@android:string/cut"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_copy"
+				android:icon="@drawable/ic_content_copy"
+				android:orderInCategory="100"
+				android:title="@android:string/copy"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_paste"
+				android:icon="@drawable/ic_content_paste"
+				android:orderInCategory="100"
+				android:title="@android:string/paste"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_delete"
+				android:icon="@drawable/ic_backspace"
+				android:orderInCategory="100"
+				android:title="@string/action_delete"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_select_all"
+				android:icon="@drawable/ic_select_all"
+				android:orderInCategory="100"
+				android:title="@android:string/selectAll"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_timestamp"
+				android:icon="@drawable/ic_plus_time"
+				android:orderInCategory="100"
+				android:title="@string/action_timestamp"
+				app:showAsAction="withText" />
+		</menu>
+	</item>
+	<item
+		android:id="@+id/action_view"
+		android:icon="@drawable/ic_view"
+		android:orderInCategory="100"
+		android:title="@string/action_view"
+		app:showAsAction="ifRoom|withText">
+		<menu>
+			<item
+				android:id="@+id/action_find"
+				android:icon="@drawable/ic_search"
+				android:orderInCategory="100"
+				android:title="@string/action_find"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_goto"
+				android:icon="@drawable/ic_arrow_forward"
+				android:orderInCategory="100"
+				android:title="@string/action_goto"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_line_break"
+				android:icon="@drawable/ic_keyboard_return"
+				android:orderInCategory="100"
+				android:title="@string/action_line_break"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_encoding"
+				android:icon="@drawable/ic_language"
+				android:orderInCategory="100"
+				android:title="@string/action_encoding"
+				app:showAsAction="withText" />
+			<group android:checkableBehavior="all">
+				<item
+					android:id="@+id/action_status_bar"
+					android:icon="@drawable/ic_status_bar"
+					android:orderInCategory="100"
+					android:title="@string/action_status_bar"
+					app:showAsAction="withText" />
+				<item
+					android:id="@+id/action_wrap_text"
+					android:icon="@drawable/ic_wrap_text"
+					android:orderInCategory="100"
+					android:title="@string/action_warp_text"
+					app:showAsAction="withText" />
+				<item
+					android:id="@+id/action_font_monospace"
+					android:icon="@drawable/ic_format_monospace"
+					android:orderInCategory="100"
+					android:title="@string/action_font_monospace"
+					app:showAsAction="withText" />
+			</group>
+			<item
+				android:id="@+id/action_font_size"
+				android:icon="@drawable/ic_format_size"
+				android:orderInCategory="100"
+				android:title="@string/action_font_size"
+				app:showAsAction="withText" />
+			<item
+				android:id="@+id/action_statistics"
+				android:icon="@drawable/ic_assessment"
+				android:orderInCategory="100"
+				android:title="@string/action_statistics"
+				app:showAsAction="withText" />
+		</menu>
+	</item>
 </menu>

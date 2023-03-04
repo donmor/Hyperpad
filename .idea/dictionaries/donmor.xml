@@ -1,11 +1,15 @@
 <component name="ProjectDictionaryState">
   <dictionary name="donmor">
     <words>
+      <w>appname</w>
       <w>beckman</w>
       <w>burmesedict</w>
       <w>chih</w>
       <w>cjdict</w>
+      <w>donmor</w>
+      <w>dorg</w>
       <w>endlocal</w>
+      <w>errorlevel</w>
       <w>gnomovision</w>
       <w>hsiang</w>
       <w>hsiao</w>
@@ -19,7 +23,9 @@
       <w>laodict</w>
       <w>libtabe</w>
       <w>naist</w>
+      <w>noninfringement</w>
       <w>setlocal</w>
+      <w>sharedpref</w>
       <w>sinica</w>
       <w>tortious</w>
       <w>tsai</w>
