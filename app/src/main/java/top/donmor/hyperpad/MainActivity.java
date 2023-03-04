@@ -710,25 +710,6 @@ public class MainActivity extends AppCompatActivity {
 		dialog.show();
 	}
 
-//	//SAF执行结果
-//	@Override
-//	public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
-//		super.onActivityResult(requestCode, resultCode, resultData);
-//		if (resultCode == Activity.RESULT_OK && resultData != null) {
-//			final Uri uri = resultData.getData();
-//			if (uri != null)
-//				switch (requestCode) {
-//					case SAF_OPEN:
-//						openDoc(uri);
-//						break;
-//					case SAF_SAVE:
-//						fileWrite(this.operation, uri, this.operationData);
-//						break;
-//				}
-//		}
-//	}
-
-
 	private void loadStatusBar() {
 		if (appbar.findViewById(R.id.status_bar_widget) == null) {
 			statBar = LayoutInflater.from(this).inflate(R.layout.status_bar, findViewById(R.id.status_bar_holder));
@@ -889,33 +870,16 @@ public class MainActivity extends AppCompatActivity {
 
 	//载入文件
 	private void openDoc(Uri uri) {
-//		BufferedInputStream is = null;
-//		ByteArrayOutputStream os = null;
 		try (ParcelFileDescriptor ifd = Objects.requireNonNull(getContentResolver().openFileDescriptor(uri, KEY_FD_R));
 				FileInputStream is = new FileInputStream(ifd.getFileDescriptor());
 				FileChannel ic = is.getChannel()) {
 			String filename;
 			if (KEY_SCH_CONTENT.equals(uri.getScheme())) {  //判断使用的协议
-//				is = new BufferedInputStream(Objects.requireNonNull(getContentResolver().openInputStream(uri)));
 				filename = Objects.requireNonNull(DocumentFile.fromSingleUri(this, uri)).getName();
 			} else if (KEY_SCH_FILE.equals(uri.getScheme())) {
 				checkPermission();
-//				is = new BufferedInputStream(new FileInputStream(uri.getPath()));
 				filename = uri.getLastPathSegment();
 			} else throw new FileNotFoundException();
-//			os = new ByteArrayOutputStream(BUF_SIZE);   //读全部数据
-//			int len = is.available();
-//			int length, lenTotal = 0;
-//			byte[] b = new byte[BUF_SIZE];
-//			while ((length = is.read(b)) != -1) {
-//				os.write(b, 0, length);
-//				lenTotal += length;
-//			}
-//			os.flush();
-//			if (lenTotal != len) throw new IOException();
-//			b = os.toByteArray();
-//			is.close();
-//			os.close();
 			CharsetDetector detector = new CharsetDetector();   //检测编码
 			CharsetMatch[] matches = detector.setText(fc2ba(ic)).detectAll();
 			if (matches == null || matches.length == 0) throw new IOException();
@@ -1003,35 +967,19 @@ public class MainActivity extends AppCompatActivity {
 
 	//写入
 	private void fileWrite(int operation, Uri uri, Intent opData) {
-//		BufferedInputStream is;
-//		BufferedOutputStream os = null;
 		try (ParcelFileDescriptor ofd = Objects.requireNonNull(getContentResolver().openFileDescriptor(uri, MainActivity.KEY_FD_W));
 				FileOutputStream os = new FileOutputStream(ofd.getFileDescriptor());
 				FileChannel oc = os.getChannel()) {
 			String filename;
 			if (KEY_SCH_CONTENT.equals(uri.getScheme())) {  //判断协议
-//				os = new BufferedOutputStream(Objects.requireNonNull(getContentResolver().openOutputStream(uri)));
 				filename = Objects.requireNonNull(DocumentFile.fromSingleUri(this, uri)).getName();
 			} else if (KEY_SCH_FILE.equals(uri.getScheme())) {
-//				os = new BufferedOutputStream(new FileOutputStream(uri.getPath()));
 				filename = uri.getLastPathSegment();
 			} else throw new FileNotFoundException();
 			Editable e = editor.getText();
 			if (e == null) throw new IOException();
 			CharSequence s = setLB(e.toString(), lineBreak);    //处理文本并二进制化，写入
-//			is = new BufferedInputStream(new ByteArrayInputStream(removeZero(Charset.forName(encoding).encode(s.toString()).array())));
 			ba2fc(removeZero(Charset.forName(encoding).encode(s.toString()).array()), oc);
-//			int len = is.available();
-//			int length, lenTotal = 0;
-//			byte[] b = new byte[BUF_SIZE];
-//			while ((length = is.read(b)) != -1) {
-//				os.write(b, 0, length);
-//				lenTotal += length;
-//			}
-//			os.flush();
-//			if (lenTotal != len) throw new IOException();
-//			is.close();
-//			os.close();
 			current = uri;
 			currentFilename = filename;
 			editor.clearModified();
@@ -1152,8 +1100,6 @@ public class MainActivity extends AppCompatActivity {
 					if (df != null && !df.canWrite()) {
 						throw new FileNotFoundException();
 					}
-//					InputStream is = getContentResolver().openInputStream(u);
-//					is.close();
 				} else if (KEY_SCH_FILE.equals(u.getScheme()) && (u.getPath() == null || !new File(u.getPath()).canRead()))
 					throw new FileNotFoundException();
 				if (!u.equals(uri)) ux[count++] = u;
