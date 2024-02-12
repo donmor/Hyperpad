@@ -6,6 +6,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
@@ -18,11 +19,12 @@ import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
 import android.text.Editable;
 import android.text.InputType;
-import android.text.SpannableString;
+import android.text.Layout;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
+import android.text.style.AlignmentSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.LeadingMarginSpan;
 import android.text.style.RelativeSizeSpan;
@@ -83,6 +85,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -453,10 +456,19 @@ public class MainActivity extends AppCompatActivity {
 		} else if (itemId == idPrint) {
 			printText();
 		} else if (itemId == idAbout) {
-			SpannableString spannableString = new SpannableString(getString(R.string.about));
+			SpannableStringBuilder spannableString = new SpannableStringBuilder(getString(R.string.about));
 			Linkify.addLinks(spannableString, Linkify.ALL);
+			if (Locale.CHINA.equals(getResources().getConfiguration().locale)) {
+				spannableString.append('\n').append('\n');
+				spannableString.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.content_sub)),
+						spannableString.length(), spannableString.length(), Spanned.SPAN_MARK_POINT);
+				spannableString.setSpan(new RelativeSizeSpan(0.75f), spannableString.length(), spannableString.length(), Spanned.SPAN_MARK_POINT);
+				spannableString.setSpan((AlignmentSpan) () -> Layout.Alignment.ALIGN_CENTER,
+						spannableString.length(), spannableString.length(), Spanned.SPAN_MARK_POINT);
+				spannableString.append(getString(R.string.ICP));
+			}
 			android.app.AlertDialog aboutDialog = new android.app.AlertDialog.Builder(this)
-					.setTitle(getString(R.string.about_title, BuildConfig.VERSION_NAME))
+					.setTitle(getString(R.string.about_title, getVersion(this)))
 					.setMessage(spannableString)
 					.setPositiveButton(android.R.string.ok, null)
 					.setNeutralButton(R.string.market, (dialog, which) -> {
@@ -1129,5 +1141,16 @@ public class MainActivity extends AppCompatActivity {
 		String[] arrP = editor.getEditableText().toString().split(LINE_BREAK.LF.s);
 		for (String p : arrP) builder.append(KEY_HTML_P1).append(p).append(KEY_HTML_P2);
 		return builder.append(KEY_HTML_HEADER3).toString();
+	}
+
+	private static String getVersion(Context context) {
+		try {
+			PackageManager manager = context.getPackageManager();
+			PackageInfo info = manager.getPackageInfo(context.getPackageName(), 0);
+			return info.versionName;
+		} catch (PackageManager.NameNotFoundException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

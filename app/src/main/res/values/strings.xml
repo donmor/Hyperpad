@@ -56,4 +56,5 @@
 	<string name="about_title" translatable="false">Hyperpad - %s</string>
 	<!--MISC-->
 	<string name="char_tab" translatable="false">&#160;&#160;&#160;&#160;</string>
+	<string name="ICP" translatable="false">鲁ICP备2024056381号</string>
 </resources>
