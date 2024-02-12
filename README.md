@@ -2,8 +2,6 @@
 
 ![avatar](img/Hyperpad.png)
 
-&ensp;&ensp;&ensp;&ensp;&ensp;<a href="https://www.coolapk.com/apk/top.donmor.hyperpad"><img src="https://static.coolapk.com/images/header-logo.png" height="80" alt="CoolApk" /></a>&ensp;&ensp;&ensp;&ensp;<img src="img/qr.png" height="80" alt="QrCode"/>
-
 Hyperpad is an app that simply implements the main function of a notepad. You open the app, you write something, and you save it. That's all.
 
 <img src="img/img01.png" width="360" height="640" alt="01"/>&emsp;&emsp;<img src="img/img02.png" width="360" height="640" alt="02" />
@@ -42,6 +40,6 @@ The localization of this app is currently provided by Google Translation. Pull r
 
 Thank you for trying donmor's productions. I'd really appreciate it if you kindly support us via the buttons below, and take more effect to improve our productions.
 
-&ensp;&ensp;<a href="https://liberapay.com/donmor3000/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg" height="30" /></a>&ensp;&ensp;<a href="https://donmor.top/#DonationQrCode"><img alt="Donate using Alipay and Wechat Pay" src="https://donmor.top/img/aliwechat.svg" height="30" /></a>
+&ensp;&ensp;<a href="https://liberapay.com/donmor3000/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg" height="30" /></a>&ensp;&ensp;<a href="https://donmor.top/#DonationQrCode"><img alt="Donate using Alipay and Wechat Pay" src="https://donmor.top/img/cnpay.svg" height="30" /></a>
 
 If you take an interest in us, fell free to visit [our homepage](https://donmor.top/).

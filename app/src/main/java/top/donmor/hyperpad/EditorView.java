@@ -1,5 +1,7 @@
 package top.donmor.hyperpad;
 
+import static android.content.Context.CLIPBOARD_SERVICE;
+
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Build;
@@ -21,8 +23,6 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Objects;
-
-import static android.content.Context.CLIPBOARD_SERVICE;
 
 public class EditorView extends AppCompatEditText {
 
@@ -49,11 +49,11 @@ public class EditorView extends AppCompatEditText {
 		addTextChangedListener(new HistoryListener());
 	}
 
-	public boolean isFindCaseSensitive() {
+	boolean isFindCaseSensitive() {
 		return findCaseSensitive;
 	}
 
-	public void setFindCaseSensitive(boolean findCaseSensitive) {
+	void setFindCaseSensitive(boolean findCaseSensitive) {
 		this.findCaseSensitive = findCaseSensitive;
 	}
 
@@ -114,13 +114,19 @@ public class EditorView extends AppCompatEditText {
 	}
 
 	int replaceAll(String key, String content) {
+		int pos = getSelectionStart();
+		boolean wrap = false;
 		if (key.length() == 0) return 0;
 		int i = 0;
-		setSelection(0);
+		setSelection(pos);
 		if (find(key))
-			do {
+			while (replace(key, content) && !(wrap && pos <= getSelectionStart())) {
+				if (pos > getSelectionStart()) {
+					wrap = true;
+					pos += content.length() - key.length();
+				}
 				i++;
-			} while (replace(key, content));
+			}
 		return i;
 	}
 
@@ -129,7 +135,7 @@ public class EditorView extends AppCompatEditText {
 		return onKey(keyCode, event, super.onKeyDown(keyCode, event));
 	}
 
-	public boolean onKey(int keyCode, @NonNull KeyEvent event, boolean fallback) {
+	boolean onKey(int keyCode, @NonNull KeyEvent event, boolean fallback) {
 		boolean canCp = getSelectionStart() != getSelectionEnd();
 		if (!event.isCtrlPressed() && event.isAltPressed() && !event.isShiftPressed() && !event.isMetaPressed() && !event.isFunctionPressed() && !event.isSymPressed()) {
 			switch (keyCode) {
@@ -256,11 +262,11 @@ public class EditorView extends AppCompatEditText {
 		}
 	}
 
-	public void setFinding(String str) {
+	void setFinding(String str) {
 		finding = str;
 	}
 
-	public String getFinding() {
+	String getFinding() {
 		return finding;
 	}
 

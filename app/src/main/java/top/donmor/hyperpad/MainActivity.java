@@ -47,6 +47,7 @@ import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -79,6 +80,7 @@ import java.nio.channels.NonReadableChannelException;
 import java.nio.channels.NonWritableChannelException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
@@ -213,6 +215,16 @@ public class MainActivity extends AppCompatActivity {
 					fileWrite(this.operation, uri, this.operationData);
 			}
 		});
+		// 拦截返回键
+		getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+			@Override
+			public void handleOnBackPressed() {
+				if (editor.isModified()) confirm(OPE_CLOSE);
+				else {
+					processOperation(OPE_CLOSE, null);
+				}
+			}
+		});
 		//沉浸式双栏
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 			Window window = getWindow();
@@ -260,7 +272,7 @@ public class MainActivity extends AppCompatActivity {
 
 			@Override
 			public void quit() {
-				MainActivity.this.onBackPressed();
+				getOnBackPressedDispatcher().onBackPressed();
 			}
 
 			@Override
@@ -417,203 +429,177 @@ public class MainActivity extends AppCompatActivity {
 				idMono = R.id.action_font_monospace,
 				idSize = R.id.action_font_size,
 				idStat = R.id.action_statistics;
-		switch (item.getItemId()) {
-			case idNew:
-				if (editor.isModified()) confirm(OPE_NEW);
-				else newDoc();
-				break;
-			case idOpen:
-				if (editor.isModified()) confirm(OPE_OPEN);
-				else SAFOpen();
-				break;
-			case idRecent:
-				if (editor.isModified()) confirm(OPE_RECENT);
-				else openRecent();
-				break;
-			case idSave:
-				if (current == null) SAFSave();
-				else fileWrite();
-				break;
-			case idSaveAs:
-				SAFSave();
-				break;
-			case idShare:
-				Editable editable = editor.getText();
-				if (editable != null) startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
-						.putExtra(Intent.EXTRA_SUBJECT, currentFilename)
-						.putExtra(Intent.EXTRA_TEXT, editable.toString())
-						.setType(TYPE_TEXT), null));
-				break;
-			case idPrint:
-				printText();
-				break;
-			case idAbout:
-				SpannableString spannableString = new SpannableString(getString(R.string.about));
-				Linkify.addLinks(spannableString, Linkify.ALL);
-				android.app.AlertDialog aboutDialog = new android.app.AlertDialog.Builder(this)
-						.setTitle(getString(R.string.about_title, BuildConfig.VERSION_NAME))
-						.setMessage(spannableString)
-						.setPositiveButton(android.R.string.ok, null)
-						.setNeutralButton(R.string.market, (dialog, which) -> {
-							try {
-								startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(KEY_URI_RATE + getPackageName())));
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						})
-						.show();
-				((TextView) aboutDialog.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-					((TextView) aboutDialog.findViewById(android.R.id.message)).setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Widget_TextView);
-				break;
-			case idClose:
-				onBackPressed();
-				break;
-			case idUndo:
-				editor.undo();
-				break;
-			case idRedo:
-				editor.redo();
-				break;
-			case idCut:
-				editor.onTextContextMenuItem(android.R.id.cut);
-				break;
-			case idCopy:
-				editor.onTextContextMenuItem(android.R.id.copy);
-				break;
-			case idPaste:
-				editor.onTextContextMenuItem(android.R.id.paste);
-				break;
-			case idDelete:
-				int st = editor.getSelectionStart(), en = editor.getSelectionEnd();
-				if (st < en) editor.getEditableText().delete(st, en);
-				break;
-			case idSelectAll:
-				editor.onTextContextMenuItem(android.R.id.selectAll);
-				break;
-			case idTimestamp:
-				editor.insertTimestamp();
-				break;
-			case idFind:    //查找替换
-				invokeFindReplace(false);
-				break;
-			case idGoto:
-				gotoDialog();
-				break;
-			case idLineBreak:
-				final int v = lineBreak == LINE_BREAK.CRLF ? 1 : lineBreak == LINE_BREAK.CR ? 2 : 0;
-				if (dialog != null) dialog.dismiss();
-				dialog = new AlertDialog.Builder(this)
-						.setTitle(R.string.action_line_break)
-						.setSingleChoiceItems(R.array.line_breaks, v, (dialog, which) -> {
-							if (which == v) return;
-							lineBreak = which == 1 ? LINE_BREAK.CRLF : which == 2 ? LINE_BREAK.CR : LINE_BREAK.LF;
-							dialog.dismiss();
-							updateStatusBar();
-						})
-						.setOnDismissListener(dialog -> {
-							editor.requestFocus();
-							MainActivity.this.dialog = null;
-						})
-						.show();
-				break;
-			case idEncoding:
-				int i = 0, e = 0;
-				for (String key : charsets) {
-					if (key.equals(encoding)) e = i;
-					i++;
-				}
-				final int v2 = e;
-				if (dialog != null) dialog.dismiss();
-				dialog = new AlertDialog.Builder(this)
-						.setTitle(R.string.action_encoding)
-						.setSingleChoiceItems(charsets, v2, (dialog, which) -> {
-							if (which == v2) return;
-							encoding = charsets[which];
-							dialog.dismiss();
-							updateStatusBar();
-						})
-						.setOnDismissListener(dialog -> {
-							editor.requestFocus();
-							MainActivity.this.dialog = null;
-						})
-						.show();
-				break;
-			case idStatusBar:
-				statusBar = !item.isChecked();
-				item.setChecked(statusBar);
-				if (statusBar) loadStatusBar();
-				else {
-					((ViewGroup) findViewById(R.id.status_bar_holder)).removeAllViews();
-					statBar = null;
-				}
-				preferences.edit().putBoolean(KEY_CFG_STAT, statusBar).apply();
-				break;
-			case idWrapText:
-				wrap = !item.isChecked();
-				item.setChecked(wrap);
-				editor.setHorizontallyScrolling(!wrap);
-				preferences.edit().putBoolean(KEY_CFG_WRAP, wrap).apply();
-				break;
-			case idMono:
-				mono = !item.isChecked();
-				item.setChecked(mono);
-				editor.setTypeface(mono ? Typeface.MONOSPACE : Typeface.DEFAULT);
-				preferences.edit().putBoolean(KEY_CFG_MONO, mono).apply();
-				break;
-			case idSize:
-				final NumberPicker picker = new NumberPicker(this);
-				picker.setMinValue(8);
-				picker.setMaxValue(36);
-				picker.setValue(fontSize);
-				picker.setOnValueChangedListener((picker1, oldVal, newVal) -> editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, picker1.getValue()));
-				FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-				params.gravity = Gravity.CENTER;
-				FrameLayout layout1 = new FrameLayout(this);
-				layout1.setPadding(dialogPadding, 0, dialogPadding, 0);
-				layout1.addView(picker, params);
-				if (dialog != null) dialog.dismiss();
-				dialog = new AlertDialog.Builder(this)
-						.setTitle(R.string.action_font_size)
-						.setView(layout1)
-						.setPositiveButton(android.R.string.ok, (dialog, which) -> {
-							fontSize = picker.getValue();
-							preferences.edit().putInt(KEY_CFG_SIZE, fontSize).apply();
-						})
-						.setOnCancelListener(dialog -> editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize))
-						.setOnDismissListener(dialog -> {
-							editor.requestFocus();
-							MainActivity.this.dialog = null;
-						})
-						.show();
-				break;
-			case idStat:
-				int[] stat = editor.statistics(), pan = new int[]{R.string.statistics_char, R.string.statistics_word, R.string.statistics_line};
-				int p;
-				String value;
-				SpannableStringBuilder builder = new SpannableStringBuilder();
-				builder.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.content_sub)), 0, 0, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
-				for (int i1 = 0; i1 < 3; i1++) {
-					builder.append(getString(pan[i1]));
-					p = builder.length();
-					value = String.valueOf(stat[i1]);
-					builder.append(value);
-					builder.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.content)), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-					builder.setSpan(new RelativeSizeSpan(1.2f), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-					builder.setSpan(new LeadingMarginSpan.Standard(dialogPadding, 0), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-					builder.setSpan(new StyleSpan(Typeface.MONOSPACE.getStyle()), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-				}
-				if (dialog != null) dialog.dismiss();
-				dialog = new AlertDialog.Builder(this)
-						.setTitle(R.string.action_statistics)
-						.setMessage(builder)
-						.setPositiveButton(android.R.string.ok, null)
-						.setOnDismissListener(dialog -> {
-							editor.requestFocus();
-							MainActivity.this.dialog = null;
-						})
-						.show();
-				break;
+		int itemId = item.getItemId();
+		if (itemId == idNew) {
+			if (editor.isModified()) confirm(OPE_NEW);
+			else newDoc();
+		} else if (itemId == idOpen) {
+			if (editor.isModified()) confirm(OPE_OPEN);
+			else SAFOpen();
+		} else if (itemId == idRecent) {
+			if (editor.isModified()) confirm(OPE_RECENT);
+			else openRecent();
+		} else if (itemId == idSave) {
+			if (current == null) SAFSave();
+			else fileWrite();
+		} else if (itemId == idSaveAs) {
+			SAFSave();
+		} else if (itemId == idShare) {
+			Editable editable = editor.getText();
+			if (editable != null) startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND)
+					.putExtra(Intent.EXTRA_SUBJECT, currentFilename)
+					.putExtra(Intent.EXTRA_TEXT, editable.toString())
+					.setType(TYPE_TEXT), null));
+		} else if (itemId == idPrint) {
+			printText();
+		} else if (itemId == idAbout) {
+			SpannableString spannableString = new SpannableString(getString(R.string.about));
+			Linkify.addLinks(spannableString, Linkify.ALL);
+			android.app.AlertDialog aboutDialog = new android.app.AlertDialog.Builder(this)
+					.setTitle(getString(R.string.about_title, BuildConfig.VERSION_NAME))
+					.setMessage(spannableString)
+					.setPositiveButton(android.R.string.ok, null)
+					.setNeutralButton(R.string.market, (dialog, which) -> {
+						try {
+							startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(KEY_URI_RATE + getPackageName())));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					})
+					.show();
+			((TextView) aboutDialog.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+				((TextView) aboutDialog.findViewById(android.R.id.message)).setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Widget_TextView);
+		} else if (itemId == idClose) {
+			getOnBackPressedDispatcher().onBackPressed();
+		} else if (itemId == idUndo) {
+			editor.undo();
+		} else if (itemId == idRedo) {
+			editor.redo();
+		} else if (itemId == idCut) {
+			editor.onTextContextMenuItem(android.R.id.cut);
+		} else if (itemId == idCopy) {
+			editor.onTextContextMenuItem(android.R.id.copy);
+		} else if (itemId == idPaste) {
+			editor.onTextContextMenuItem(android.R.id.paste);
+		} else if (itemId == idDelete) {
+			int st = editor.getSelectionStart(), en = editor.getSelectionEnd();
+			if (st < en) editor.getEditableText().delete(st, en);
+		} else if (itemId == idSelectAll) {
+			editor.onTextContextMenuItem(android.R.id.selectAll);
+		} else if (itemId == idTimestamp) {
+			editor.insertTimestamp();
+		} else if (itemId == idFind) {    //查找替换
+			invokeFindReplace(false);
+		} else if (itemId == idGoto) {
+			gotoDialog();
+		} else if (itemId == idLineBreak) {
+			final int v = lineBreak == LINE_BREAK.CRLF ? 1 : lineBreak == LINE_BREAK.CR ? 2 : 0;
+			if (dialog != null) dialog.dismiss();
+			dialog = new AlertDialog.Builder(this)
+					.setTitle(R.string.action_line_break)
+					.setSingleChoiceItems(R.array.line_breaks, v, (dialog, which) -> {
+						if (which == v) return;
+						lineBreak = which == 1 ? LINE_BREAK.CRLF : which == 2 ? LINE_BREAK.CR : LINE_BREAK.LF;
+						dialog.dismiss();
+						updateStatusBar();
+					})
+					.setOnDismissListener(dialog -> {
+						editor.requestFocus();
+						MainActivity.this.dialog = null;
+					})
+					.show();
+		} else if (itemId == idEncoding) {
+			int i = 0, e = 0;
+			for (String key : charsets) {
+				if (key.equals(encoding)) e = i;
+				i++;
+			}
+			final int v2 = e;
+			if (dialog != null) dialog.dismiss();
+			dialog = new AlertDialog.Builder(this)
+					.setTitle(R.string.action_encoding)
+					.setSingleChoiceItems(charsets, v2, (dialog, which) -> {
+						if (which == v2) return;
+						encoding = charsets[which];
+						dialog.dismiss();
+						updateStatusBar();
+					})
+					.setOnDismissListener(dialog -> {
+						editor.requestFocus();
+						MainActivity.this.dialog = null;
+					})
+					.show();
+		} else if (itemId == idStatusBar) {
+			statusBar = !item.isChecked();
+			item.setChecked(statusBar);
+			if (statusBar) loadStatusBar();
+			else {
+				((ViewGroup) findViewById(R.id.status_bar_holder)).removeAllViews();
+				statBar = null;
+			}
+			preferences.edit().putBoolean(KEY_CFG_STAT, statusBar).apply();
+		} else if (itemId == idWrapText) {
+			wrap = !item.isChecked();
+			item.setChecked(wrap);
+			editor.setHorizontallyScrolling(!wrap);
+			preferences.edit().putBoolean(KEY_CFG_WRAP, wrap).apply();
+		} else if (itemId == idMono) {
+			mono = !item.isChecked();
+			item.setChecked(mono);
+			editor.setTypeface(mono ? Typeface.MONOSPACE : Typeface.DEFAULT);
+			preferences.edit().putBoolean(KEY_CFG_MONO, mono).apply();
+		} else if (itemId == idSize) {
+			final NumberPicker picker = new NumberPicker(this);
+			picker.setMinValue(8);
+			picker.setMaxValue(36);
+			picker.setValue(fontSize);
+			picker.setOnValueChangedListener((picker1, oldVal, newVal) -> editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, picker1.getValue()));
+			FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+			params.gravity = Gravity.CENTER;
+			FrameLayout layout1 = new FrameLayout(this);
+			layout1.setPadding(dialogPadding, 0, dialogPadding, 0);
+			layout1.addView(picker, params);
+			if (dialog != null) dialog.dismiss();
+			dialog = new AlertDialog.Builder(this)
+					.setTitle(R.string.action_font_size)
+					.setView(layout1)
+					.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+						fontSize = picker.getValue();
+						preferences.edit().putInt(KEY_CFG_SIZE, fontSize).apply();
+					})
+					.setOnCancelListener(dialog -> editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize))
+					.setOnDismissListener(dialog -> {
+						editor.requestFocus();
+						MainActivity.this.dialog = null;
+					})
+					.show();
+		} else if (itemId == idStat) {
+			int[] stat = editor.statistics(), pan = new int[]{R.string.statistics_char, R.string.statistics_word, R.string.statistics_line};
+			int p;
+			String value;
+			SpannableStringBuilder builder = new SpannableStringBuilder();
+			builder.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.content_sub)), 0, 0, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
+			for (int i1 = 0; i1 < 3; i1++) {
+				builder.append(getString(pan[i1]));
+				p = builder.length();
+				value = String.valueOf(stat[i1]);
+				builder.append(value);
+				builder.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.content)), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+				builder.setSpan(new RelativeSizeSpan(1.2f), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+				builder.setSpan(new LeadingMarginSpan.Standard(dialogPadding, 0), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+				builder.setSpan(new StyleSpan(Typeface.MONOSPACE.getStyle()), p, p + value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+			}
+			if (dialog != null) dialog.dismiss();
+			dialog = new AlertDialog.Builder(this)
+					.setTitle(R.string.action_statistics)
+					.setMessage(builder)
+					.setPositiveButton(android.R.string.ok, null)
+					.setOnDismissListener(dialog -> {
+						editor.requestFocus();
+						MainActivity.this.dialog = null;
+					})
+					.show();
 		}
 		return super.onOptionsItemSelected(item);
 	}
@@ -740,7 +726,10 @@ public class MainActivity extends AppCompatActivity {
 		try {
 			Editable e = editor.getText();
 			if (!cacheFile.createNewFile() || e == null) throw new IOException();
-			writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(cacheFile), CHARSET_DEFAULT));
+			//noinspection IOStreamConstructor
+			writer = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+					? new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(cacheFile.toPath()), CHARSET_DEFAULT))
+					: new BufferedWriter(new OutputStreamWriter(new FileOutputStream(cacheFile), CHARSET_DEFAULT));
 			writer.write(e.toString());
 			writer.flush();
 			if (!preferences.edit()
@@ -775,7 +764,10 @@ public class MainActivity extends AppCompatActivity {
 			BufferedReader reader = null;
 			try {
 
-				reader = new BufferedReader(new InputStreamReader(new FileInputStream(cacheFile), CHARSET_DEFAULT));
+				//noinspection IOStreamConstructor
+				reader = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+						? new BufferedReader(new InputStreamReader(Files.newInputStream(cacheFile.toPath()), CHARSET_DEFAULT))
+						: new BufferedReader(new InputStreamReader(new FileInputStream(cacheFile), CHARSET_DEFAULT));
 				int length;
 				StringBuilder builder = new StringBuilder();
 				char[] chars = new char[preferences.getInt(KEY_SIS_LEN, Integer.MAX_VALUE)];
@@ -809,16 +801,6 @@ public class MainActivity extends AppCompatActivity {
 				.remove(KEY_SIS_ID)
 				.remove(KEY_SIS_LB)
 				.apply();
-	}
-
-	//拦截返回键
-	@Override
-	public void onBackPressed() {
-		if (editor.isModified()) confirm(OPE_CLOSE);
-		else {
-			setRecent(current);
-			super.onBackPressed();
-		}
 	}
 
 	private void confirm(final int operation) {
@@ -901,17 +883,6 @@ public class MainActivity extends AppCompatActivity {
 		} catch (Exception e) {
 			e.printStackTrace();
 			Toast.makeText(this, R.string.err_load_file, Toast.LENGTH_SHORT).show();
-//		} finally {
-//			if (is != null) try {
-//				is.close();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//			if (os != null) try {
-//				os.close();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
 		}
 	}
 
@@ -939,20 +910,17 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void SAFOpen() {
-//		startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL), SAF_OPEN);
 		getChooserOpen.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL));
 	}
 
 	private void SAFSave() {
 		this.operation = OPE_EDIT;
-//		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename), SAF_SAVE);
 		getChooserSave.launch(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename));
 	}
 
 	private void SAFSave(int operation, Intent data) {
 		this.operation = operation;
 		this.operationData = data;
-//		startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename), SAF_SAVE);
 		getChooserSave.launch(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(TYPE_ALL).putExtra(Intent.EXTRA_TITLE, currentFilename));
 	}
 
@@ -995,12 +963,6 @@ public class MainActivity extends AppCompatActivity {
 		} catch (Exception e) {
 			e.printStackTrace();
 			Toast.makeText(this, R.string.err_write_file, Toast.LENGTH_SHORT).show();
-//		} finally {
-//			if (os != null) try {
-//				os.close();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
 		}
 	}
 
@@ -1020,7 +982,8 @@ public class MainActivity extends AppCompatActivity {
 				break;
 			case OPE_CLOSE:
 				setRecent(current);
-				super.onBackPressed();
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) finishAfterTransition();
+				else finish();
 				break;
 			case OPE_VIEW:
 				viewDoc(intent);
@@ -1127,20 +1090,28 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private static void ba2fc(byte[] bytes, @NonNull FileChannel oc) throws IOException, NonWritableChannelException {
+		//noinspection ResultOfMethodCallIgnored
 		oc.write(ByteBuffer.wrap(bytes));
-		oc.truncate(bytes.length);
-		oc.force(true);
+		try {
+			oc.truncate(bytes.length);
+			oc.force(true);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	//清除0x00
 	private static byte[] removeZero(byte[] b) {
 		final byte zero = 0x00;
-		while (b[b.length - 1] == zero) {
-			byte[] c = new byte[b.length - 1];
-			System.arraycopy(b, 0, c, 0, c.length);
-			b = c;
+		int t = b.length;
+		if (t == 0) return b;
+		while (b[t - 1] == zero) {
+			t--;
 		}
-		return b;
+		if (t == b.length) return b;
+		byte[] c = new byte[t];
+		System.arraycopy(b, 0, c, 0, t);
+		return c;
 	}
 
 	@TargetApi(23)
